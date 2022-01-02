@@ -18,6 +18,7 @@ struct Or : std::integral_constant<int, 5> {};
 struct Implies : std::integral_constant<int, 6> {};
 struct Not : std::integral_constant<int, 7> {};
 struct Coma : std::integral_constant<int, 8> {};
+struct Dot : std::integral_constant<int, 9> {};
 
 using Function =
     details::utils::TypeWithLabel<std::string, class FunctionLabel>;
@@ -30,19 +31,19 @@ using Constant =
 
 using Lexeme =
     std::variant<OpenBracket, CloseBracket, Forall, Exists, And, Or, Implies,
-                 Not, Coma, Function, Variable, Predicate, Constant>;
+                 Not, Coma, Dot, Function, Variable, Predicate, Constant>;
 
 using LexemeGenerator = cppcoro::generator<const Lexeme>;
 
-std::ostream &operator<<(std::ostream &os, const Lexeme &lexeme) {
-  std::visit(
-      details::utils::Overloaded{
-          [&](OpenBracket) { os << '('; }, [&](CloseBracket) { os << ')'; },
-          [&](Forall) { os << '@'; }, [&](Exists) { os << '?'; },
-          [&](And) { os << "and"; }, [&](Or) { os << "or"; },
-          [&](Implies) { os << "->"; }, [&](Not) { os << "not"; },
-          [&](Coma) { os << ','; }, [&](auto &&v) { os << v; }},
-      lexeme);
+inline std::ostream &operator<<(std::ostream &os, const Lexeme &lexeme) {
+  std::visit(details::utils::Overloaded{
+                 [&](OpenBracket) { os << '('; },
+                 [&](CloseBracket) { os << ')'; }, [&](Forall) { os << '@'; },
+                 [&](Exists) { os << '?'; }, [&](And) { os << "and"; },
+                 [&](Or) { os << "or"; }, [&](Implies) { os << "->"; },
+                 [&](Not) { os << "not"; }, [&](Coma) { os << ','; },
+                 [&](auto &&v) { os << v; }, [&](Dot) { os << '.'; }},
+             lexeme);
   return os;
 }
 
@@ -51,7 +52,7 @@ struct LexerError : std::runtime_error {
 };
 
 inline LexemeGenerator Tokenize(std::string string) {
-  int i = 0;
+  std::string::size_type i = 0;
   while (i < string.size()) {
     i = details::utils::SkipWhiteSpaces(i, string);
     switch (string[i]) {
@@ -101,6 +102,10 @@ inline LexemeGenerator Tokenize(std::string string) {
         co_yield Coma{};
         ++i;
         break;
+      case '.':
+        co_yield Dot{};
+        ++i;
+        break;
       case 'o':  // or
         if (string[i + 1] != 'r') {
           throw LexerError{"Error in tokenizing"};
@@ -114,5 +119,5 @@ inline LexemeGenerator Tokenize(std::string string) {
   }
 }
 
-}  // namespace fol_parser::lexer
+}  // namespace fol::lexer
 
