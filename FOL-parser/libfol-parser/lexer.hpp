@@ -19,6 +19,7 @@ struct Implies : std::integral_constant<int, 6> {};
 struct Not : std::integral_constant<int, 7> {};
 struct Coma : std::integral_constant<int, 8> {};
 struct Dot : std::integral_constant<int, 9> {};
+struct EPS : std::integral_constant<int, 10> {};
 
 using Function =
     details::utils::TypeWithLabel<std::string, class FunctionLabel>;
@@ -31,19 +32,20 @@ using Constant =
 
 using Lexeme =
     std::variant<OpenBracket, CloseBracket, Forall, Exists, And, Or, Implies,
-                 Not, Coma, Dot, Function, Variable, Predicate, Constant>;
+                 Not, Coma, Dot, Function, Variable, Predicate, Constant, EPS>;
 
 using LexemeGenerator = cppcoro::generator<const Lexeme>;
 
 inline std::ostream &operator<<(std::ostream &os, const Lexeme &lexeme) {
-  std::visit(details::utils::Overloaded{
-                 [&](OpenBracket) { os << '('; },
-                 [&](CloseBracket) { os << ')'; }, [&](Forall) { os << '@'; },
-                 [&](Exists) { os << '?'; }, [&](And) { os << "and"; },
-                 [&](Or) { os << "or"; }, [&](Implies) { os << "->"; },
-                 [&](Not) { os << "not"; }, [&](Coma) { os << ','; },
-                 [&](auto &&v) { os << v; }, [&](Dot) { os << '.'; }},
-             lexeme);
+  std::visit(
+      details::utils::Overloaded{
+          [&](OpenBracket) { os << '('; }, [&](CloseBracket) { os << ')'; },
+          [&](Forall) { os << '@'; }, [&](Exists) { os << '?'; },
+          [&](And) { os << "and"; }, [&](Or) { os << "or"; },
+          [&](Implies) { os << "->"; }, [&](Not) { os << "not"; },
+          [&](Coma) { os << ','; }, [&](EPS) {}, [&](auto &&v) { os << v; },
+          [&](Dot) { os << '.'; }},
+      lexeme);
   return os;
 }
 
@@ -117,6 +119,7 @@ inline LexemeGenerator Tokenize(std::string string) {
         throw LexerError{"Unhandled lexem"};
     }
   }
+  co_yield EPS{};
 }
 
 }  // namespace fol::lexer

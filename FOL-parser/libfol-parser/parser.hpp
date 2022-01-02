@@ -13,13 +13,17 @@ struct DisjunctionPrimeFormula;
 struct ConjunctionFormula;
 struct ConjuctionPrimeFormula;
 struct FolFormula;
+struct PredicateFormula;
+struct FunctionFormula;
 struct Term;
 struct TermList;
 
+struct FunctionFormula {
+  std::unique_ptr<std::pair<lexer::Function, TermList>> data;
+};
+
 struct Term {
-  std::variant<lexer::Constant, lexer::Variable,
-               std::unique_ptr<std::pair<lexer::Function, TermList>>>
-      data;
+  std::variant<lexer::Constant, lexer::Variable, FunctionFormula> data;
 };
 
 struct TermList {
@@ -28,7 +32,7 @@ struct TermList {
 
 struct ConjuctionPrimeFormula {
   std::variant<std::unique_ptr<std::pair<FolFormula, ConjuctionPrimeFormula>>,
-               std::monostate>
+               lexer::EPS>
       data;
 };
 
@@ -39,7 +43,7 @@ struct ConjunctionFormula {
 struct DisjunctionPrimeFormula {
   std::variant<
       std::unique_ptr<std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>,
-      std::monostate>
+      lexer::EPS>
       data;
 };
 
@@ -84,26 +88,122 @@ struct ParseError : public std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
-inline TermList ParseTermList(lexer::LexemeGenerator generator);
+inline FolFormula ParseFolFormula(lexer::LexemeGenerator &generator);
+inline Term ParseTerm(lexer::LexemeGenerator &generator);
+inline TermList ParseTermList(lexer::LexemeGenerator &generator);
+inline DisjunctionFormula ParseDisjunctionFormula(
+    lexer::LexemeGenerator &generator);
+inline DisjunctionPrimeFormula ParseDisjunctionPrimeFormula(
+    lexer::LexemeGenerator &generator);
+inline ConjunctionFormula ParseConjuctionFormula(
+    lexer::LexemeGenerator &generator);
+inline ConjuctionPrimeFormula ParseConjuctionPrimeFormula(
+    lexer::LexemeGenerator &generator);
+
+inline Term ParseTerm(lexer::LexemeGenerator &generator) {
+  return std::visit(
+      details::utils::Overloaded{
+          [&](lexer::Constant constant) -> Term {
+            return {std::move(constant)};
+          },
+          [&](lexer::Variable var) -> Term { return {std::move(var)}; },
+          [&](lexer::Function func) -> Term {
+            return {FunctionFormula{
+                std::make_unique<std::pair<lexer::Function, TermList>>(
+                    std::move(func), ParseTermList(generator))}};
+          },
+          [](auto &&) -> Term {
+            throw ParseError{"Unhandled variant in Term parsing."};
+          }},
+      details::utils::GetValueFromGenerator(generator));
+}
+
+inline TermList ParseTermList(lexer::LexemeGenerator &generator) {
+  return TermList{std::make_unique<std::pair<Term, TermList>>(
+      ParseTerm(generator), ParseTermList(generator))};
+}
+
+inline ConjuctionPrimeFormula ParseConjuctionPrimeFormula(
+    lexer::LexemeGenerator &generator) {
+  return std::visit(
+      details::utils::Overloaded{
+          [&](lexer::And) -> ConjuctionPrimeFormula {
+            auto fol_formula = ParseFolFormula(generator);
+            auto conj_prime = ParseConjuctionPrimeFormula(generator);
+            return {
+                std::make_unique<std::pair<FolFormula, ConjuctionPrimeFormula>>(
+                    std::move(fol_formula), std::move(conj_prime))};
+          },
+          [](lexer::EPS) -> ConjuctionPrimeFormula { return {lexer::EPS{}}; },
+          [](auto &&) -> ConjuctionPrimeFormula {
+            throw ParseError{"Unhandled variant in conjuction prime parsing."};
+          }},
+      details::utils::GetValueFromGenerator(generator));
+}
+
+inline ConjunctionFormula ParseConjuctionFormula(
+    lexer::LexemeGenerator &generator) {
+  auto fol_formula = ParseFolFormula(generator);
+  auto conj_prime = ParseConjuctionPrimeFormula(generator);
+  return {std::make_unique<std::pair<FolFormula, ConjuctionPrimeFormula>>(
+      std::move(fol_formula), std::move(conj_prime))};
+}
+
+inline DisjunctionPrimeFormula ParseDisjunctionPrimeFormula(
+    lexer::LexemeGenerator &generator) {
+  return std::visit(
+      details::utils::Overloaded{
+          [&](lexer::Or) -> DisjunctionPrimeFormula {
+            auto conj = ParseConjuctionFormula(generator);
+            auto disj_prime = ParseDisjunctionPrimeFormula(generator);
+            return {std::make_unique<
+                std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
+                std::move(conj), std::move(disj_prime))};
+          },
+          [](lexer::EPS) -> DisjunctionPrimeFormula { return {lexer::EPS{}}; },
+          [](auto &&) -> DisjunctionPrimeFormula {
+            throw ParseError{
+                "Unhandled variant in DisjunctionPrimeFormula parsing."};
+          }},
+      details::utils::GetValueFromGenerator(generator));
+}
+
+inline DisjunctionFormula ParseDisjunctionFormula(
+    lexer::LexemeGenerator &generator) {
+  auto conj = ParseConjuctionFormula(generator);
+  auto disj_prime = ParseDisjunctionPrimeFormula(generator);
+  return {{std::move(conj), std::move(disj_prime)}};
+}
 
 inline ImplicationFormula ParseImplicationFormula(
-    lexer::LexemeGenerator generator);
+    lexer::LexemeGenerator &generator) {
+  auto disjunction = ParseDisjunctionFormula(generator);
+  if (!std::holds_alternative<lexer::Implies>(
+          details::utils::GetValueFromGenerator(generator))) {
+    if (!std::holds_alternative<lexer::CloseBracket>(
+            details::utils::GetValueFromGenerator(generator))) {
+      throw ParseError{
+          "Logic error in implication parsing: If no implies sign, then it "
+          "must be close bracket."};
+    }
 
-inline FolFormula ParseFolFormula(lexer::LexemeGenerator generator) {
+    return {std::move(disjunction)};
+  }
+
+  return {std::make_unique<std::pair<DisjunctionFormula, ImplicationFormula>>(
+      std::move(disjunction), ParseImplicationFormula(generator))};
+}
+
+inline FolFormula ParseFolFormula(lexer::LexemeGenerator &generator) {
   return {std::visit(
       details::utils::Overloaded{
           [&generator](lexer::OpenBracket) -> FolFormula {
-            ImplicationFormula result =
-                ParseImplicationFormula(std::move(generator));
-            if (!std::holds_alternative<lexer::CloseBracket>(
-                    details::utils::GetValueFromGenerator(generator))) {
-              throw ParseError{"Error in parsing (<unary): no closebracket."};
-            }
+            ImplicationFormula result = ParseImplicationFormula(generator);
             return {BracketFormula{std::move(result)}};
           },
           [&generator](lexer::Not) -> FolFormula {
-            return {NotFormula{std::make_unique<FolFormula>(
-                ParseFolFormula(std::move(generator)))}};
+            return {NotFormula{
+                std::make_unique<FolFormula>(ParseFolFormula(generator))}};
           },
           [&generator](lexer::Forall) -> FolFormula {
             auto var = details::utils::GetValueFromGenerator(generator);
@@ -116,8 +216,7 @@ inline FolFormula ParseFolFormula(lexer::LexemeGenerator generator) {
               throw ParseError{
                   "Error in parsing @ <var> . <impl>: no . after <var>."};
             }
-            ImplicationFormula impl =
-                ParseImplicationFormula(std::move(generator));
+            ImplicationFormula impl = ParseImplicationFormula(generator);
             return {ForallFormula{
                 {std::move(std::get<lexer::Variable>(var)), std::move(impl)}}};
           },
@@ -132,19 +231,18 @@ inline FolFormula ParseFolFormula(lexer::LexemeGenerator generator) {
               throw ParseError{
                   "Error in parsing ? <var> . <impl>: no . after <var>."};
             }
-            ImplicationFormula impl =
-                ParseImplicationFormula(std::move(generator));
+            ImplicationFormula impl = ParseImplicationFormula(generator);
             return {ForallFormula{
                 {std::move(std::get<lexer::Variable>(var)), std::move(impl)}}};
           },
           [&generator](lexer::Predicate predicate) -> FolFormula {
             return {PredicateFormula{
-                {std::move(predicate), ParseTermList(std::move(generator))}}};
+                {std::move(predicate), ParseTermList(generator)}}};
           },
-          [](auto&&) -> FolFormula {
+          [](auto &&) -> FolFormula {
             throw ParseError{"Unhandled fol variant"};
           }},
-      std::move(details::utils::GetValueFromGenerator(generator)))};
+      details::utils::GetValueFromGenerator(generator))};
 }
 
 }  // namespace fol::parser

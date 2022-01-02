@@ -29,7 +29,7 @@ TEST_CASE("tokenize sequence", "[lexer][fol]") {
   auto vec = std::vector<Lexeme>{
       Constant{"cConst"},    And{},    Predicate{"pPredicate"}, Or{},
       Variable{"vVariable"}, Forall{}, Function{"fFunction"},   Exists{},
-      Function{"fBar"}};
+      Function{"fBar"},      EPS{}};
 
   REQUIRE(std::equal(vec.begin(), vec.end(), generator.begin()));
 }
