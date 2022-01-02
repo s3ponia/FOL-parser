@@ -1,0 +1,6 @@
+[requires]
+catch2/2.13.3
+andreasbuhr-cppcoro/cci.20210113
+
+[generators]
+cmake
