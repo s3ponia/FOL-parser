@@ -7,8 +7,8 @@ Parser follows following grammar rules
 <disj>        ::= <conj> <disj'>
 <disj'>       ::= or <conj> <disj'>
                 | EPS
-<conj>        ::= <unary> <conjj'>
-<conj'>       ::= and <unary> <conjj'>
+<conj>        ::= <unary> <conj'>
+<conj'>       ::= and <unary> <conj'>
                 | EPS
 <unary>       ::= ( <impl> )
                 | not unary
