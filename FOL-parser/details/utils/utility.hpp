@@ -3,7 +3,7 @@
 #include <cctype>
 #include <string_view>
 
-namespace fol_parser::details::utils {
+namespace fol::details::utils {
 template <typename T, typename Label>
 struct TypeWithLabel : public T {
   using T::T;
@@ -31,5 +31,5 @@ struct Overloaded : Ts... {
 template <class... Ts>
 Overloaded(Ts...) -> Overloaded<Ts...>;
 
-}  // namespace fol_parser::details::utils
+}  // namespace fol::details::utils
 

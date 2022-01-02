@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <variant>
 
-namespace fol_parser::lexer {
+namespace fol::lexer {
 struct OpenBracket : std::integral_constant<int, 0> {};
 struct CloseBracket : std::integral_constant<int, 1> {};
 struct Forall : std::integral_constant<int, 2> {};
@@ -32,6 +32,8 @@ using Lexeme =
     std::variant<OpenBracket, CloseBracket, Forall, Exists, And, Or, Implies,
                  Not, Coma, Function, Variable, Predicate, Constant>;
 
+using LexemeGenerator = cppcoro::generator<const Lexeme>;
+
 std::ostream &operator<<(std::ostream &os, const Lexeme &lexeme) {
   std::visit(
       details::utils::Overloaded{
@@ -48,7 +50,7 @@ struct LexerError : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
-inline cppcoro::generator<const Lexeme> Tokenize(std::string string) {
+inline LexemeGenerator Tokenize(std::string string) {
   int i = 0;
   while (i < string.size()) {
     i = details::utils::SkipWhiteSpaces(i, string);

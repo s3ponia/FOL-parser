@@ -3,7 +3,7 @@
 #include <libfol-parser/lexer.hpp>
 #include <variant>
 #include <vector>
-using namespace fol_parser::lexer;
+using namespace fol::lexer;
 
 TEST_CASE("tokenize single constant", "[lexer][fol]") {
   auto generator = Tokenize("cConst1");
@@ -26,7 +26,7 @@ TEST_CASE("tokenize single constant", "[lexer][fol]") {
 TEST_CASE("tokenize sequence", "[lexer][fol]") {
   auto generator =
       Tokenize("cConst and pPredicate or vVariable @ fFunction ? fBar");
-  auto vec = std::vector<fol_parser::lexer::Lexeme>{
+  auto vec = std::vector<Lexeme>{
       Constant{"cConst"},    And{},    Predicate{"pPredicate"}, Or{},
       Variable{"vVariable"}, Forall{}, Function{"fFunction"},   Exists{},
       Function{"fBar"}};
