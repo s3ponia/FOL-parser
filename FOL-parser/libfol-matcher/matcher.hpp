@@ -179,6 +179,72 @@ struct UnaryMatcher {
   std::optional<parser::UnaryFormula> formula{};
 };
 
+struct ExistsMatcher {
+  bool match(parser::FolFormula o) {
+    UnaryMatcher unary_matcher;
+    if (!unary_matcher.match(std::move(o))) {
+      return false;
+    }
+
+    auto unary = std::move(unary_matcher.formula.value());
+
+    if (!std::holds_alternative<parser::ExistsFormula>(unary.data)) {
+      return false;
+    }
+
+    formula = std::get<parser::ExistsFormula>(std::move(unary.data));
+    return true;
+  }
+
+  std::optional<parser::ExistsFormula> formula{};
+};
+
+template <typename ImplMatcher>
+struct ExistsCompoundMatcher {
+  bool match(parser::FolFormula o) {
+    ExistsMatcher exists_matcher;
+    if (!exists_matcher.match(std::move(o))) {
+      return false;
+    }
+    var = std::move(exists_matcher.formula->data.first);
+    return matcher.match(std::move(exists_matcher.formula->data.second));
+  }
+  std::optional<lexer::Variable> var;
+  ImplMatcher matcher;
+};
+
+struct NotMatcher {
+  bool match(parser::FolFormula o) {
+    UnaryMatcher unary_matcher;
+    if (!unary_matcher.match(std::move(o))) {
+      return false;
+    }
+
+    auto unary = std::move(unary_matcher.formula.value());
+
+    if (!std::holds_alternative<parser::NotFormula>(unary.data)) {
+      return false;
+    }
+
+    formula = std::get<parser::NotFormula>(std::move(unary.data));
+    return true;
+  }
+
+  std::optional<parser::NotFormula> formula{};
+};
+
+template <typename ImplMatcher>
+struct NotCompoundMatcher {
+  bool match(parser::FolFormula o) {
+    NotMatcher forall_matcher;
+    if (!forall_matcher.match(std::move(o))) {
+      return false;
+    }
+    return matcher.match(std::move(forall_matcher.formula->data));
+  }
+  ImplMatcher matcher;
+};
+
 struct ForallMatcher {
   bool match(parser::FolFormula o) {
     UnaryMatcher unary_matcher;
@@ -197,6 +263,20 @@ struct ForallMatcher {
   }
 
   std::optional<parser::ForallFormula> formula{};
+};
+
+template <typename ImplMatcher>
+struct ForallCompoundMatcher {
+  bool match(parser::FolFormula o) {
+    ForallMatcher forall_matcher;
+    if (!forall_matcher.match(std::move(o))) {
+      return false;
+    }
+    var = std::move(forall_matcher.formula->data.first);
+    return matcher.match(std::move(forall_matcher.formula->data.second));
+  }
+  std::optional<lexer::Variable> var;
+  ImplMatcher matcher;
 };
 
 struct PredicateMatcher {
@@ -346,16 +426,69 @@ struct PredicateCompoundMatcher {
   TermListMatcher term_list{};
 };
 
-// (@ vx . impl1[x]) and (@ vx . impl2[x])
-// <impl> =>
-// <disj> =>
-// <conj> =>
-// <unary> <conj'> =>
-// (@ vx . impl1[x]) <conj'> =>
-// (@ vx . impl1[x]) and <unary> <conj'> =>
-// (@ vx . impl1[x]) and (@ vx . impl2[x])
-// (ForallMatcher{} && ForallMatcher{}).match(<impl>)
+inline ImplicationMatcher Impl() { return {}; }
 
-// Conjunction<Forall, Forall>{}.match(formula);
+template <typename FMatcher, typename SMatcher>
+inline ImplicationCompoundMatcher<FMatcher, SMatcher> Impl(FMatcher, SMatcher) {
+  return {};
+}
+
+inline DisjunctionMatcher Disj() { return {}; }
+
+template <typename FMatcher, typename SMatcher>
+inline DisjunctionCompoundMatcher<FMatcher, SMatcher> Disj(FMatcher, SMatcher) {
+  return {};
+}
+
+inline ConjunctionMatcher Conj() { return {}; }
+
+template <typename FMatcher, typename SMatcher>
+inline ConjunctionCompoundMatcher<FMatcher, SMatcher> Conj(FMatcher, SMatcher) {
+  return {};
+}
+
+inline UnaryMatcher Unary() { return {}; }
+
+inline ExistsMatcher Exists() { return {}; }
+
+template <typename T>
+inline ExistsCompoundMatcher<T> Exists(T) {
+  return {};
+}
+
+inline ForallMatcher Forall() { return {}; }
+
+template <typename T>
+inline ForallCompoundMatcher<T> Forall(T) {
+  return {};
+}
+
+inline PredicateMatcher Pred() { return {}; }
+
+template <typename T>
+inline PredicateCompoundMatcher<T> Pred(T) {
+  return {};
+}
+
+inline TermMatcher Term() { return {}; }
+
+inline ConstantMatcher Const() { return {}; }
+
+inline VariableMatcher Var() { return {}; }
+
+inline FunctionMatcher Fun() { return {}; }
+
+template <typename T>
+inline FunctionCompoundMatcher<T> Fun(T) {
+  return {};
+}
+
+inline TermListMatcher TermList() { return {}; }
+
+template <typename... Args>
+inline TermListCompoundMatcher<Args...> TermList(Args...) {
+  return {};
+}
+
 }  // namespace fol::matcher
 
