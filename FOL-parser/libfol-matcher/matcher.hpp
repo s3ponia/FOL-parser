@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <libfol-parser/parser/types.hpp>
 #include <optional>
 #include <variant>
@@ -265,17 +266,17 @@ struct ForallMatcher {
   std::optional<parser::ForallFormula> formula{};
 };
 
-template <typename ImplMatcher>
+template <typename NameMatcher, typename ImplMatcher>
 struct ForallCompoundMatcher {
   bool match(parser::FolFormula o) {
     ForallMatcher forall_matcher;
     if (!forall_matcher.match(std::move(o))) {
       return false;
     }
-    var = std::move(forall_matcher.formula->data.first);
+    var.match(std::move(forall_matcher.formula->data.first));
     return matcher.match(std::move(forall_matcher.formula->data.second));
   }
-  std::optional<lexer::Variable> var;
+  NameMatcher var;
   ImplMatcher matcher;
 };
 
@@ -411,7 +412,15 @@ struct ConstantMatcher {
   std::optional<lexer::Constant> constant;
 };
 
-template <typename TermListMatcher>
+struct NameMatcher {
+  bool match(std::string str) {
+    name = std::move(str);
+    return true;
+  }
+  std::string name;
+};
+
+template <typename NameMatcher, typename TermListMatcher>
 struct PredicateCompoundMatcher {
   bool match(parser::FolFormula o) {
     PredicateMatcher matcher;
@@ -419,32 +428,74 @@ struct PredicateCompoundMatcher {
       return false;
     }
 
-    predicate_name = std::move(matcher.formula->data.first);
+    predicate_name.match(std::move(matcher.formula->data.first));
     return term_list.match(std::move(matcher.formula->data.second));
   }
-  std::optional<lexer::Predicate> predicate_name;
+  NameMatcher predicate_name;
   TermListMatcher term_list{};
 };
+
+template <typename Type, typename MatchType, typename Matcher>
+struct RefMatcher {
+  bool match(MatchType o) {
+    Matcher matcher{};
+    if (!matcher.match(std::move(o))) {
+      return false;
+    }
+    formula.get() = std::move(matcher.formula);
+    return true;
+  }
+  std::reference_wrapper<std::optional<Type>> formula;
+};
+
+using RefName = RefMatcher<std::string, std::string, NameMatcher>;
+
+using RefImpl = RefMatcher<parser::ImplicationFormula, parser::FolFormula,
+                           ImplicationMatcher>;
+using RefDisj = RefMatcher<parser::DisjunctionFormula, parser::FolFormula,
+                           DisjunctionMatcher>;
+using RefConj = RefMatcher<parser::ConjunctionFormula, parser::FolFormula,
+                           ConjunctionMatcher>;
+using RefUnary =
+    RefMatcher<parser::UnaryFormula, parser::FolFormula, UnaryMatcher>;
+using RefNot = RefMatcher<parser::NotFormula, parser::FolFormula, NotMatcher>;
+using RefForall =
+    RefMatcher<parser::ForallFormula, parser::FolFormula, ForallMatcher>;
+using RefExists =
+    RefMatcher<parser::ExistsFormula, parser::FolFormula, ExistsMatcher>;
+using RefPred =
+    RefMatcher<parser::PredicateFormula, parser::FolFormula, PredicateMatcher>;
+
+using RefTerm = RefMatcher<parser::Term, parser::TermList, TermMatcher>;
+using RefConstant =
+    RefMatcher<lexer::Constant, parser::TermList, ConstantMatcher>;
+using RefVariable =
+    RefMatcher<lexer::Variable, parser::TermList, VariableMatcher>;
+using RefFunction =
+    RefMatcher<parser::FunctionFormula, parser::TermList, FunctionMatcher>;
 
 inline ImplicationMatcher Impl() { return {}; }
 
 template <typename FMatcher, typename SMatcher>
-inline ImplicationCompoundMatcher<FMatcher, SMatcher> Impl(FMatcher, SMatcher) {
-  return {};
+inline ImplicationCompoundMatcher<FMatcher, SMatcher> Impl(FMatcher &&lhs,
+                                                           SMatcher &&rhs) {
+  return {std::forward<FMatcher>(lhs), std::forward<SMatcher>(rhs)};
 }
 
 inline DisjunctionMatcher Disj() { return {}; }
 
 template <typename FMatcher, typename SMatcher>
-inline DisjunctionCompoundMatcher<FMatcher, SMatcher> Disj(FMatcher, SMatcher) {
-  return {};
+inline DisjunctionCompoundMatcher<FMatcher, SMatcher> Disj(FMatcher &&lhs,
+                                                           SMatcher &&rhs) {
+  return {std::forward<FMatcher>(lhs), std::forward<SMatcher>(rhs)};
 }
 
 inline ConjunctionMatcher Conj() { return {}; }
 
 template <typename FMatcher, typename SMatcher>
-inline ConjunctionCompoundMatcher<FMatcher, SMatcher> Conj(FMatcher, SMatcher) {
-  return {};
+inline ConjunctionCompoundMatcher<FMatcher, SMatcher> Conj(FMatcher &&lhs,
+                                                           SMatcher &&rhs) {
+  return {std::forward<SMatcher>(lhs), std::forward<SMatcher>(rhs)};
 }
 
 inline UnaryMatcher Unary() { return {}; }
@@ -452,22 +503,24 @@ inline UnaryMatcher Unary() { return {}; }
 inline ExistsMatcher Exists() { return {}; }
 
 template <typename T>
-inline ExistsCompoundMatcher<T> Exists(T) {
-  return {};
+inline ExistsCompoundMatcher<T> Exists(T &&o) {
+  return {std::forward<T>(o)};
 }
 
 inline ForallMatcher Forall() { return {}; }
 
-template <typename T>
-inline ForallCompoundMatcher<T> Forall(T) {
-  return {};
+template <typename NMatcher, typename T>
+inline ForallCompoundMatcher<NMatcher, T> Forall(NMatcher &&n, T &&o) {
+  return {std::forward<NMatcher>(n), std::forward<T>(o)};
 }
+
+inline NameMatcher Name() { return {}; }
 
 inline PredicateMatcher Pred() { return {}; }
 
-template <typename T>
-inline PredicateCompoundMatcher<T> Pred(T) {
-  return {};
+template <typename NameMatcher, typename T>
+inline PredicateCompoundMatcher<NameMatcher, T> Pred(NameMatcher &&m, T &&o) {
+  return {std::forward<NameMatcher>(m), std::forward<T>(o)};
 }
 
 inline TermMatcher Term() { return {}; }
@@ -479,8 +532,8 @@ inline VariableMatcher Var() { return {}; }
 inline FunctionMatcher Fun() { return {}; }
 
 template <typename T>
-inline FunctionCompoundMatcher<T> Fun(T) {
-  return {};
+inline FunctionCompoundMatcher<T> Fun(T &&o) {
+  return {std::forward<T>(o)};
 }
 
 inline TermListMatcher TermList() { return {}; }

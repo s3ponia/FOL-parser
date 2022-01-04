@@ -29,12 +29,14 @@ TEST_CASE("test disjunction compound matcher", "[matcher][fol]") {
 TEST_CASE("test compound matchers", "[matcher][fol]") {
   auto fol_formula =
       Parse(lexer::Tokenize("@ vx . pP1(vx)->pP2(vx)->pP3(vx)->pP4(vx)"));
-  ForallCompoundMatcher<ImplicationCompoundMatcher<
-      PredicateCompoundMatcher<VariableMatcher>, ImplicationMatcher>>
+  ForallCompoundMatcher<
+      NameMatcher, ImplicationCompoundMatcher<
+                       PredicateCompoundMatcher<NameMatcher, VariableMatcher>,
+                       ImplicationMatcher>>
       matcher;
   REQUIRE(matcher.match(std::move(fol_formula)));
-  REQUIRE(matcher.var == "vx");
-  REQUIRE(matcher.matcher.first.predicate_name == "pP1");
+  REQUIRE(matcher.var.name == "vx");
+  REQUIRE(matcher.matcher.first.predicate_name.name == "pP1");
   REQUIRE(matcher.matcher.first.term_list.variable == "vx");
   REQUIRE(ToString(matcher.matcher.second.formula.value()) ==
           "pP2(vx)->pP3(vx)->pP4(vx)");
@@ -43,11 +45,12 @@ TEST_CASE("test compound matchers", "[matcher][fol]") {
 TEST_CASE("test compound matchers with factory functions", "[matcher][fol]") {
   auto fol_formula =
       Parse(lexer::Tokenize("@ vx . pP1(vx)->pP2(vx)->pP3(vx)->pP4(vx)"));
-  auto matcher =
-      Forall(Impl(Pred(Var()), Impl(Pred(Var()), Impl(Pred(Var()), Impl()))));
+  auto matcher = Forall(Name(), Impl(Pred(Name(), Var()),
+                                     Impl(Pred(Name(), Var()),
+                                          Impl(Pred(Name(), Var()), Impl()))));
   REQUIRE(matcher.match(std::move(fol_formula)));
-  REQUIRE(matcher.var == "vx");
-  REQUIRE(matcher.matcher.first.predicate_name == "pP1");
+  REQUIRE(matcher.var.name == "vx");
+  REQUIRE(matcher.matcher.first.predicate_name.name == "pP1");
   REQUIRE(matcher.matcher.first.term_list.variable == "vx");
 }
 
