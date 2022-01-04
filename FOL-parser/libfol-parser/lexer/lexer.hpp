@@ -17,7 +17,7 @@ struct And : std::integral_constant<int, 4> {};
 struct Or : std::integral_constant<int, 5> {};
 struct Implies : std::integral_constant<int, 6> {};
 struct Not : std::integral_constant<int, 7> {};
-struct Coma : std::integral_constant<int, 8> {};
+struct Comma : std::integral_constant<int, 8> {};
 struct Dot : std::integral_constant<int, 9> {};
 struct EPS : std::integral_constant<int, 10> {};
 
@@ -31,10 +31,29 @@ using Constant =
     details::utils::TypeWithLabel<std::string, class ConstantLabel>;
 
 using Lexeme = std::variant<EPS, OpenBracket, CloseBracket, Forall, Exists, And,
-                            Or, Implies, Not, Coma, Dot, Function, Variable,
+                            Or, Implies, Not, Comma, Dot, Function, Variable,
                             Predicate, Constant>;
 
 using LexemeGenerator = cppcoro::generator<const Lexeme>;
+
+inline namespace literals {
+inline Constant operator""_c(const char *str, std::size_t) {
+  std::string res = std::string{"c"} + str;
+  return res.c_str();
+}
+inline Variable operator""_v(const char *str, std::size_t) {
+  std::string res = std::string{"v"} + str;
+  return res.c_str();
+}
+inline Predicate operator""_p(const char *str, std::size_t) {
+  std::string res = std::string{"p"} + str;
+  return res.c_str();
+}
+inline Function operator""_f(const char *str, std::size_t) {
+  std::string res = std::string{"f"} + str;
+  return res.c_str();
+}
+}  // namespace literals
 
 inline std::ostream &operator<<(std::ostream &os, OpenBracket) {
   return os << "(";
@@ -58,7 +77,7 @@ inline std::ostream &operator<<(std::ostream &os, Implies) {
 
 inline std::ostream &operator<<(std::ostream &os, Not) { return os << "~"; }
 
-inline std::ostream &operator<<(std::ostream &os, Coma) { return os << ","; }
+inline std::ostream &operator<<(std::ostream &os, Comma) { return os << ","; }
 
 inline std::ostream &operator<<(std::ostream &os, Dot) { return os << "."; }
 
@@ -121,7 +140,7 @@ inline LexemeGenerator Tokenize(std::string string) {
         i += 2;
         break;
       case ',':
-        co_yield Coma{};
+        co_yield Comma{};
         ++i;
         break;
       case '.':

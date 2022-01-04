@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <catch2/catch.hpp>
-#include <libfol-parser/lexer.hpp>
+#include <libfol-parser/lexer/lexer.hpp>
 #include <variant>
 #include <vector>
 using namespace fol::lexer;
@@ -37,7 +37,7 @@ TEST_CASE("tokenize sequence", "[lexer][fol]") {
                                  Function{"fBar"},
                                  Dot{},
                                  Implies{},
-                                 Coma{},
+                                 Comma{},
                                  EPS{}};
 
   REQUIRE(std::equal(vec.begin(), vec.end(), generator.begin()));
