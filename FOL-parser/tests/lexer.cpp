@@ -25,11 +25,20 @@ TEST_CASE("tokenize single constant", "[lexer][fol]") {
 
 TEST_CASE("tokenize sequence", "[lexer][fol]") {
   auto generator =
-      Tokenize("cConst and pPredicate or vVariable @ fFunction ? fBar");
-  auto vec = std::vector<Lexeme>{
-      Constant{"cConst"},    And{},    Predicate{"pPredicate"}, Or{},
-      Variable{"vVariable"}, Forall{}, Function{"fFunction"},   Exists{},
-      Function{"fBar"},      EPS{}};
+      Tokenize("cConst and pPredicate or vVariable @ fFunction ? fBar . -> ,");
+  auto vec = std::vector<Lexeme>{Constant{"cConst"},
+                                 And{},
+                                 Predicate{"pPredicate"},
+                                 Or{},
+                                 Variable{"vVariable"},
+                                 Forall{},
+                                 Function{"fFunction"},
+                                 Exists{},
+                                 Function{"fBar"},
+                                 Dot{},
+                                 Implies{},
+                                 Coma{},
+                                 EPS{}};
 
   REQUIRE(std::equal(vec.begin(), vec.end(), generator.begin()));
 }

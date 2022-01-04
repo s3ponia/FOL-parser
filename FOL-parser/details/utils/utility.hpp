@@ -30,7 +30,8 @@ inline std::string_view::size_type SkipWhiteSpaces(
 inline std::string_view GetUntilWhiteSpace(std::string_view::size_type &from,
                                            std::string_view str) {
   std::string_view::size_type sv = from;
-  while (from < str.size() && !std::isspace(str[from])) {
+  while (from < str.size() && !std::isspace(str[from]) && str[from] != '(' &&
+         str[from] != ')') {
     ++from;
   }
   return std::string_view{str.begin() + sv, from - sv};
@@ -44,7 +45,7 @@ template <class... Ts>
 Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <class T>
-inline auto GetValueFromGenerator(cppcoro::generator<T> &generator) {
+inline T GetValueFromGenerator(cppcoro::generator<T> &generator) {
   return std::move(*generator.begin());
 }
 

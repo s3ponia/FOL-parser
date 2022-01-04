@@ -30,22 +30,42 @@ using Predicate =
 using Constant =
     details::utils::TypeWithLabel<std::string, class ConstantLabel>;
 
-using Lexeme =
-    std::variant<OpenBracket, CloseBracket, Forall, Exists, And, Or, Implies,
-                 Not, Coma, Dot, Function, Variable, Predicate, Constant, EPS>;
+using Lexeme = std::variant<EPS, OpenBracket, CloseBracket, Forall, Exists, And,
+                            Or, Implies, Not, Coma, Dot, Function, Variable,
+                            Predicate, Constant>;
 
 using LexemeGenerator = cppcoro::generator<const Lexeme>;
 
+inline std::ostream &operator<<(std::ostream &os, OpenBracket) {
+  return os << "(";
+}
+
+inline std::ostream &operator<<(std::ostream &os, CloseBracket) {
+  return os << ")";
+}
+
+inline std::ostream &operator<<(std::ostream &os, Forall) { return os << "@"; }
+
+inline std::ostream &operator<<(std::ostream &os, Exists) { return os << "?"; }
+
+inline std::ostream &operator<<(std::ostream &os, And) { return os << "and"; }
+
+inline std::ostream &operator<<(std::ostream &os, Or) { return os << "or"; }
+
+inline std::ostream &operator<<(std::ostream &os, Implies) {
+  return os << "->";
+}
+
+inline std::ostream &operator<<(std::ostream &os, Not) { return os << "~"; }
+
+inline std::ostream &operator<<(std::ostream &os, Coma) { return os << ","; }
+
+inline std::ostream &operator<<(std::ostream &os, Dot) { return os << "."; }
+
+inline std::ostream &operator<<(std::ostream &os, EPS) { return os; }
+
 inline std::ostream &operator<<(std::ostream &os, const Lexeme &lexeme) {
-  std::visit(
-      details::utils::Overloaded{
-          [&](OpenBracket) { os << '('; }, [&](CloseBracket) { os << ')'; },
-          [&](Forall) { os << '@'; }, [&](Exists) { os << '?'; },
-          [&](And) { os << "and"; }, [&](Or) { os << "or"; },
-          [&](Implies) { os << "->"; }, [&](Not) { os << "not"; },
-          [&](Coma) { os << ','; }, [&](EPS) {}, [&](auto &&v) { os << v; },
-          [&](Dot) { os << '.'; }},
-      lexeme);
+  std::visit([&](auto &&v) { os << v; }, lexeme);
   return os;
 }
 
@@ -119,7 +139,9 @@ inline LexemeGenerator Tokenize(std::string string) {
         throw LexerError{"Unhandled lexem"};
     }
   }
-  co_yield EPS{};
+  for (;;) {
+    co_yield EPS{};
+  }
 }
 
 }  // namespace fol::lexer

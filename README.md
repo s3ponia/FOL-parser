@@ -18,8 +18,9 @@ Parser follows following grammar rules
 <term>        ::= <constant>
                 | <var>
                 | <fn_symbol> (<term_list>)
-<term_list>   ::= <term>
-                | <term>, <term_list>
+<term_list>   ::= <term> <term_list'>
+<term_list'>  ::= , <term_list>
+		| EPS
 <name>        ::= <char>
                 | <char><name>
 <char>        ::= ('A'...'Z'|'a'...'z'|'0'...'9'|''')
