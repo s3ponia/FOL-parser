@@ -356,10 +356,10 @@ struct VariableMatcher {
       return false;
     }
 
-    variable = std::get<lexer::Variable>(std::move(matcher.term->data));
+    formula = std::get<lexer::Variable>(std::move(matcher.term->data));
     return true;
   }
-  std::optional<lexer::Variable> variable;
+  std::optional<lexer::Variable> formula;
 };
 
 struct FunctionMatcher {
@@ -414,10 +414,10 @@ struct ConstantMatcher {
 
 struct NameMatcher {
   bool match(std::string str) {
-    name = std::move(str);
+    formula = std::move(str);
     return true;
   }
-  std::string name;
+  std::string formula;
 };
 
 template <typename NameMatcher, typename TermListMatcher>

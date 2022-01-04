@@ -35,9 +35,9 @@ TEST_CASE("test compound matchers", "[matcher][fol]") {
                        ImplicationMatcher>>
       matcher;
   REQUIRE(matcher.match(std::move(fol_formula)));
-  REQUIRE(matcher.var.name == "vx");
-  REQUIRE(matcher.matcher.first.predicate_name.name == "pP1");
-  REQUIRE(matcher.matcher.first.term_list.variable == "vx");
+  REQUIRE(matcher.var.formula == "vx");
+  REQUIRE(matcher.matcher.first.predicate_name.formula == "pP1");
+  REQUIRE(matcher.matcher.first.term_list.formula == "vx");
   REQUIRE(ToString(matcher.matcher.second.formula.value()) ==
           "pP2(vx)->pP3(vx)->pP4(vx)");
 }
@@ -49,8 +49,25 @@ TEST_CASE("test compound matchers with factory functions", "[matcher][fol]") {
                                      Impl(Pred(Name(), Var()),
                                           Impl(Pred(Name(), Var()), Impl()))));
   REQUIRE(matcher.match(std::move(fol_formula)));
-  REQUIRE(matcher.var.name == "vx");
-  REQUIRE(matcher.matcher.first.predicate_name.name == "pP1");
-  REQUIRE(matcher.matcher.first.term_list.variable == "vx");
+  REQUIRE(matcher.var.formula == "vx");
+  REQUIRE(matcher.matcher.first.predicate_name.formula == "pP1");
+  REQUIRE(matcher.matcher.first.term_list.formula == "vx");
+}
+
+TEST_CASE("test compound matchers with ref factory functions",
+          "[matcher][fol]") {
+  auto fol_formula =
+      Parse(lexer::Tokenize("@ vx . pP1(vx)->pP2(vx)->pP3(vx)->pP4(vx)"));
+  std::optional<std::string> name;
+  std::optional<std::string> fst_pred_name;
+  std::optional<lexer::Variable> var;
+  auto matcher = Forall(
+      RefName(name),
+      Impl(Pred(RefName(fst_pred_name), RefVar(var)),
+           Impl(Pred(Name(), Var()), Impl(Pred(Name(), Var()), Impl()))));
+  REQUIRE(matcher.match(std::move(fol_formula)));
+  REQUIRE(name.value() == "vx");
+  REQUIRE(fst_pred_name.value() == "pP1");
+  REQUIRE(var.value() == "vx");
 }
 
