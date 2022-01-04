@@ -19,6 +19,9 @@ TEST_CASE("simple std::cout output", "[parser][fol]") {
   TestParsing(
       "((@ vx . (pHuman(vx)->pMortal(vx)) and "
       "pHuman(cSocrates))->pMortal(cSocrates))");
+  TestParsing(
+      "(@ vx . (pHuman(vx)->pMortal(vx)) and "
+      "pHuman(cSocrates))->pMortal(cSocrates)");
   TestParsing("@ vx . pHuman(vx)->pHuman(fParent(vx))");
 }
 

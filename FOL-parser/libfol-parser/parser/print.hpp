@@ -5,7 +5,7 @@
 #include <sstream>
 
 namespace fol::parser {
-inline std::ostream &operator<<(std::ostream &, const FolFormula &);
+inline std::ostream &operator<<(std::ostream &, const UnaryFormula &);
 inline std::ostream &operator<<(std::ostream &, const TermList &);
 
 inline std::ostream &operator<<(std::ostream &os,
@@ -14,7 +14,7 @@ inline std::ostream &operator<<(std::ostream &os,
       details::utils::Overloaded{
           [&](lexer::EPS) -> std::ostream & { return os << lexer::EPS{}; },
           [&](const std::unique_ptr<
-              std::pair<FolFormula, ConjuctionPrimeFormula>> &ptr)
+              std::pair<UnaryFormula, ConjuctionPrimeFormula>> &ptr)
               -> std::ostream & {
             return os << " and " << ptr->first << ptr->second;
           }},
@@ -33,7 +33,7 @@ inline std::ostream &operator<<(std::ostream &os,
           [&](const std::unique_ptr<
               std::pair<ConjunctionFormula, DisjunctionPrimeFormula>> &ptr)
               -> std::ostream & {
-            return os << "or " << ptr->first << ptr->second;
+            return os << " or " << ptr->first << ptr->second;
           },
           [&](lexer::EPS) -> std::ostream & { return os << lexer::EPS{}; }},
       disj_prime.data);
@@ -116,7 +116,7 @@ inline std::ostream &operator<<(std::ostream &os,
 }
 
 inline std::ostream &operator<<(std::ostream &os,
-                                const FolFormula &fol_formula) {
+                                const UnaryFormula &fol_formula) {
   return std::visit([&](auto &&d) -> std::ostream & { return os << d; },
                     fol_formula.data);
 }

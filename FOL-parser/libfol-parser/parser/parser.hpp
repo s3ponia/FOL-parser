@@ -13,7 +13,7 @@
 
 namespace fol::parser {
 
-inline FolFormula ParseFolFormula(lexer::LexemeGenerator::iterator &iterator);
+inline UnaryFormula ParseFolFormula(lexer::LexemeGenerator::iterator &iterator);
 inline Term ParseTerm(lexer::LexemeGenerator::iterator &iterator);
 inline TermList ParseTermList(lexer::LexemeGenerator::iterator &iterator);
 inline DisjunctionFormula ParseDisjunctionFormula(
@@ -83,9 +83,9 @@ inline ConjuctionPrimeFormula ParseConjuctionPrimeFormula(
             ++iterator;
             auto fol_formula = ParseFolFormula(iterator);
             auto conj_prime = ParseConjuctionPrimeFormula(iterator);
-            return {
-                std::make_unique<std::pair<FolFormula, ConjuctionPrimeFormula>>(
-                    std::move(fol_formula), std::move(conj_prime))};
+            return {std::make_unique<
+                std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
+                std::move(fol_formula), std::move(conj_prime))};
           },
           [](...) -> ConjuctionPrimeFormula { return {lexer::EPS{}}; }},
       var);
@@ -95,7 +95,7 @@ inline ConjunctionFormula ParseConjuctionFormula(
     lexer::LexemeGenerator::iterator &iterator) {
   auto fol_formula = ParseFolFormula(iterator);
   auto conj_prime = ParseConjuctionPrimeFormula(iterator);
-  return {std::make_unique<std::pair<FolFormula, ConjuctionPrimeFormula>>(
+  return {std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
       std::move(fol_formula), std::move(conj_prime))};
 }
 
@@ -140,11 +140,12 @@ inline ImplicationFormula ParseImplicationFormula(
   return impl;
 }
 
-inline FolFormula ParseFolFormula(lexer::LexemeGenerator::iterator &iterator) {
+inline UnaryFormula ParseFolFormula(
+    lexer::LexemeGenerator::iterator &iterator) {
   auto var = *iterator;
   return {std::visit(
       details::utils::Overloaded{
-          [&iterator](lexer::OpenBracket) -> FolFormula {
+          [&iterator](lexer::OpenBracket) -> UnaryFormula {
             ++iterator;
             ImplicationFormula result = ParseImplicationFormula(iterator);
             if (!std::holds_alternative<lexer::CloseBracket>(*iterator)) {
@@ -154,12 +155,12 @@ inline FolFormula ParseFolFormula(lexer::LexemeGenerator::iterator &iterator) {
 
             return {BracketFormula{std::move(result)}};
           },
-          [&iterator](lexer::Not) -> FolFormula {
+          [&iterator](lexer::Not) -> UnaryFormula {
             ++iterator;
             return {NotFormula{
-                std::make_unique<FolFormula>(ParseFolFormula(iterator))}};
+                std::make_unique<UnaryFormula>(ParseFolFormula(iterator))}};
           },
-          [&iterator](lexer::Forall) -> FolFormula {
+          [&iterator](lexer::Forall) -> UnaryFormula {
             ++iterator;
             auto var = *iterator;
             if (!std::holds_alternative<lexer::Variable>(var)) {
@@ -178,7 +179,7 @@ inline FolFormula ParseFolFormula(lexer::LexemeGenerator::iterator &iterator) {
             return {ForallFormula{
                 {std::move(std::get<lexer::Variable>(var)), std::move(impl)}}};
           },
-          [&iterator](lexer::Exists) -> FolFormula {
+          [&iterator](lexer::Exists) -> UnaryFormula {
             ++iterator;
             auto var = *iterator;
             if (!std::holds_alternative<lexer::Variable>(var)) {
@@ -197,14 +198,14 @@ inline FolFormula ParseFolFormula(lexer::LexemeGenerator::iterator &iterator) {
             return {ForallFormula{
                 {std::move(std::get<lexer::Variable>(var)), std::move(impl)}}};
           },
-          [&iterator](lexer::Predicate predicate) -> FolFormula {
+          [&iterator](lexer::Predicate predicate) -> UnaryFormula {
             ++iterator;
             if (!std::holds_alternative<lexer::OpenBracket>(*iterator)) {
               throw ParseError{"No args for predicate."};
             }
             ++iterator;
 
-            auto pred = FolFormula{PredicateFormula{
+            auto pred = UnaryFormula{PredicateFormula{
                 {std::move(predicate), ParseTermList(iterator)}}};
             if (!std::holds_alternative<lexer::CloseBracket>(*iterator)) {
               throw ParseError{"No close bracket at args for predicate."};
@@ -213,15 +214,15 @@ inline FolFormula ParseFolFormula(lexer::LexemeGenerator::iterator &iterator) {
 
             return pred;
           },
-          [&](...) -> FolFormula {
-            return FolFormula{ParseImplicationFormula(iterator)};
+          [&](...) -> UnaryFormula {
+            return UnaryFormula{ParseImplicationFormula(iterator)};
           }},
       var)};
 }
 
 inline FolFormula Parse(lexer::LexemeGenerator generator) {
   auto it = generator.begin();
-  return ParseFolFormula(it);
+  return ParseImplicationFormula(it);
 }
 
 }  // namespace fol::parser

@@ -12,11 +12,13 @@ struct DisjunctionFormula;
 struct DisjunctionPrimeFormula;
 struct ConjunctionFormula;
 struct ConjuctionPrimeFormula;
-struct FolFormula;
+struct UnaryFormula;
 struct PredicateFormula;
 struct FunctionFormula;
 struct Term;
 struct TermList;
+
+using FolFormula = ImplicationFormula;
 
 struct FunctionFormula {
   std::unique_ptr<std::pair<lexer::Function, TermList>> data;
@@ -54,13 +56,13 @@ struct TermList {
 };
 
 struct ConjuctionPrimeFormula {
-  std::variant<std::unique_ptr<std::pair<FolFormula, ConjuctionPrimeFormula>>,
+  std::variant<std::unique_ptr<std::pair<UnaryFormula, ConjuctionPrimeFormula>>,
                lexer::EPS>
       data;
 };
 
 struct ConjunctionFormula {
-  std::unique_ptr<std::pair<FolFormula, ConjuctionPrimeFormula>> data;
+  std::unique_ptr<std::pair<UnaryFormula, ConjuctionPrimeFormula>> data;
 };
 
 struct DisjunctionPrimeFormula {
@@ -75,6 +77,9 @@ struct DisjunctionFormula {
                      DisjunctionPrimeFormula disj_prime =
                          DisjunctionPrimeFormula{lexer::EPS{}})
       : data{std::move(c_formula), std::move(disj_prime)} {}
+  DisjunctionFormula(
+      std::pair<ConjunctionFormula, DisjunctionPrimeFormula> pair)
+      : data(std::move(pair)) {}
 
   std::pair<ConjunctionFormula, DisjunctionPrimeFormula> data;
 };
@@ -91,7 +96,7 @@ struct BracketFormula {
 };
 
 struct NotFormula {
-  std::unique_ptr<FolFormula> data;
+  std::unique_ptr<UnaryFormula> data;
 };
 
 struct ForallFormula {
@@ -106,10 +111,10 @@ struct PredicateFormula {
   std::pair<lexer::Predicate, TermList> data;
 };
 
-struct FolFormula {
+struct UnaryFormula {
   operator DisjunctionFormula() && {
     return DisjunctionFormula{ConjunctionFormula{
-        std::make_unique<std::pair<FolFormula, ConjuctionPrimeFormula>>(
+        std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
             std::move(*this), ConjuctionPrimeFormula{lexer::EPS{}})}};
   }
   operator ImplicationFormula() && {
@@ -121,7 +126,7 @@ struct FolFormula {
       data;
 };
 
-inline ImplicationFormula operator>>=(FolFormula disj,
+inline ImplicationFormula operator>>=(UnaryFormula disj,
                                       ImplicationFormula impl) {
   return ImplicationFormula{
       std::make_unique<std::pair<DisjunctionFormula, ImplicationFormula>>(
@@ -137,11 +142,12 @@ inline DisjunctionFormula operator||(ConjunctionFormula conj_lhs,
           std::move(conj_rhs), DisjunctionPrimeFormula{lexer::EPS{}})}};
 }
 
-inline ConjunctionFormula operator&&(FolFormula fol_lhs, FolFormula fol_rhs) {
-  return {std::make_unique<std::pair<FolFormula, ConjuctionPrimeFormula>>(
+inline ConjunctionFormula operator&&(UnaryFormula fol_lhs,
+                                     UnaryFormula fol_rhs) {
+  return {std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
       std::move(fol_lhs),
       ConjuctionPrimeFormula{
-          std::make_unique<std::pair<FolFormula, ConjuctionPrimeFormula>>(
+          std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
               std::move(fol_rhs), ConjuctionPrimeFormula{lexer::EPS{}})})};
 }
 
@@ -156,19 +162,19 @@ inline TermList operator|=(Term term, TermList term_list) {
       TermListPrime{std::make_unique<TermList>(std::move(term_list))}};
 }
 
-inline FolFormula operator*(lexer::Predicate pred, TermList term_list) {
+inline UnaryFormula operator*(lexer::Predicate pred, TermList term_list) {
   return {PredicateFormula{{std::move(pred), std::move(term_list)}}};
 }
 
-inline FolFormula ForAll(lexer::Variable var, ImplicationFormula impl) {
+inline UnaryFormula ForAll(lexer::Variable var, ImplicationFormula impl) {
   return {ForallFormula{{std::move(var), std::move(impl)}}};
 }
 
-inline FolFormula Exists(lexer::Variable var, ImplicationFormula impl) {
+inline UnaryFormula Exists(lexer::Variable var, ImplicationFormula impl) {
   return {ExistsFormula{{std::move(var), std::move(impl)}}};
 }
 
-inline FolFormula B$(ImplicationFormula impl) {
+inline UnaryFormula B$(ImplicationFormula impl) {
   return {BracketFormula{std::move(impl)}};
 }
 
