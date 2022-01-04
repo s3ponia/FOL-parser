@@ -448,31 +448,80 @@ struct RefMatcher {
   std::reference_wrapper<std::optional<Type>> formula;
 };
 
-using RefName = RefMatcher<std::string, std::string, NameMatcher>;
+using RefNameMatcher = RefMatcher<std::string, std::string, NameMatcher>;
 
-using RefImpl = RefMatcher<parser::ImplicationFormula, parser::FolFormula,
-                           ImplicationMatcher>;
-using RefDisj = RefMatcher<parser::DisjunctionFormula, parser::FolFormula,
-                           DisjunctionMatcher>;
-using RefConj = RefMatcher<parser::ConjunctionFormula, parser::FolFormula,
-                           ConjunctionMatcher>;
-using RefUnary =
+inline RefNameMatcher RefName(std::optional<std::string> &res) { return {res}; }
+
+using RefImplMatcher = RefMatcher<parser::ImplicationFormula,
+                                  parser::FolFormula, ImplicationMatcher>;
+
+inline RefImplMatcher RefImpl(std::optional<parser::ImplicationFormula> &res) {
+  return {res};
+}
+
+using RefDisjMatcher = RefMatcher<parser::DisjunctionFormula,
+                                  parser::FolFormula, DisjunctionMatcher>;
+inline RefDisjMatcher RefDisj(std::optional<parser::DisjunctionFormula> &res) {
+  return {res};
+}
+
+using RefConjMatcher = RefMatcher<parser::ConjunctionFormula,
+                                  parser::FolFormula, ConjunctionMatcher>;
+inline RefConjMatcher RefConj(std::optional<parser::ConjunctionFormula> &res) {
+  return {res};
+}
+
+using RefUnaryMatcher =
     RefMatcher<parser::UnaryFormula, parser::FolFormula, UnaryMatcher>;
-using RefNot = RefMatcher<parser::NotFormula, parser::FolFormula, NotMatcher>;
-using RefForall =
-    RefMatcher<parser::ForallFormula, parser::FolFormula, ForallMatcher>;
-using RefExists =
-    RefMatcher<parser::ExistsFormula, parser::FolFormula, ExistsMatcher>;
-using RefPred =
-    RefMatcher<parser::PredicateFormula, parser::FolFormula, PredicateMatcher>;
 
-using RefTerm = RefMatcher<parser::Term, parser::TermList, TermMatcher>;
-using RefConstant =
+inline RefUnaryMatcher RefUnary(std::optional<parser::UnaryFormula> &res) {
+  return {res};
+}
+
+using RefNotMatcher =
+    RefMatcher<parser::NotFormula, parser::FolFormula, NotMatcher>;
+inline RefNotMatcher RefNot(std::optional<parser::NotFormula> &res) {
+  return {res};
+}
+
+using RefForallMatcher =
+    RefMatcher<parser::ForallFormula, parser::FolFormula, ForallMatcher>;
+inline RefForallMatcher RefForall(std::optional<parser::ForallFormula> &res) {
+  return {res};
+}
+
+using RefExistsMatcher =
+    RefMatcher<parser::ExistsFormula, parser::FolFormula, ExistsMatcher>;
+inline RefExistsMatcher RefExists(std::optional<parser::ExistsFormula> &res) {
+  return {res};
+}
+
+using RefPredMatcher =
+    RefMatcher<parser::PredicateFormula, parser::FolFormula, PredicateMatcher>;
+inline RefPredMatcher RefPred(std::optional<parser::PredicateFormula> &res) {
+  return {res};
+}
+
+using RefTerMatcher = RefMatcher<parser::Term, parser::TermList, TermMatcher>;
+inline RefTerMatcher RefTerm(std::optional<parser::Term> &res) { return {res}; }
+
+using RefConstantMatcher =
     RefMatcher<lexer::Constant, parser::TermList, ConstantMatcher>;
-using RefVariable =
+inline RefConstantMatcher RefConstant(std::optional<lexer::Constant> &res) {
+  return {res};
+}
+
+using RefVariableMatcher =
     RefMatcher<lexer::Variable, parser::TermList, VariableMatcher>;
-using RefFunction =
+inline RefVariableMatcher RefVar(std::optional<lexer::Variable> &res) {
+  return {res};
+}
+
+using RefFunctionMatcher =
     RefMatcher<parser::FunctionFormula, parser::TermList, FunctionMatcher>;
+inline RefFunctionMatcher RefFunc(std::optional<parser::FunctionFormula> &res) {
+  return {res};
+}
 
 inline ImplicationMatcher Impl() { return {}; }
 
