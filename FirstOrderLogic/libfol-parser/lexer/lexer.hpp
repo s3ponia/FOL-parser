@@ -132,6 +132,10 @@ inline LexemeGenerator Tokenize(std::string string) {
         co_yield And{};
         i += 3;
         break;
+      case '~':
+        co_yield Not{};
+        ++i;
+        break;
       case '-':  // ->
         if (string[i + 1] != '>') {
           throw LexerError{"Error in tokenizing"};

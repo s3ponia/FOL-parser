@@ -14,40 +14,15 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
 
 inline parser::UnaryFormula ToConjunctionNormalForm(
     parser::UnaryFormula formula) {
-  return std::visit(
-      details::utils::Overloaded{
-          [](parser::BracketFormula br) -> parser::UnaryFormula {
-            return {parser::BracketFormula{
-                ToConjunctionNormalForm(std::move(br.data))}};
-          },
-          [](parser::NotFormula n_f) -> parser::UnaryFormula {
-            std::optional<parser::NotFormula> n_f_v;
+  // ~(~F) = F
+  if (matcher::check::CheckNot(matcher::check::CheckNot())(formula)) {
+    std::optional<parser::UnaryFormula> fol_formula;
+    matcher::Not(matcher::Not(matcher::RefUnary(fol_formula)))
+        .match(std::move(formula));
+    return std::move(fol_formula.value());
+  }
 
-            // ~(~F) = F
-            if (matcher::Not(matcher::RefNot(n_f_v))
-                    .match(parser::UnaryFormula{std::move(n_f)})) {
-              return {parser::MakeBrackets(
-                  parser::UnaryFormula{std::move(n_f_v.value())})};
-            }
-
-            // ~(F or G) = ~F and ~G
-
-            return {MakeNot(ToConjunctionNormalForm(std::move(*n_f.data)))};
-          },
-          [](parser::ForallFormula forall) -> parser::UnaryFormula {
-            return {parser::MakeForall(
-                std::move(forall.data.first),
-                ToConjunctionNormalForm(std::move(forall.data.second)))};
-          },
-          [](parser::ExistsFormula exists) -> parser::UnaryFormula {
-            return {parser::MakeExists(
-                std::move(exists.data.first),
-                ToConjunctionNormalForm(std::move(exists.data.second)))};
-          },
-          [](parser::PredicateFormula pred) -> parser::UnaryFormula {
-            return {std::move(pred)};
-          }},
-      std::move(formula.data));
+  // ~(F or G) = ~F and ~G
 }
 
 inline parser::ConjunctionFormula ToConjunctionNormalForm(

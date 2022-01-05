@@ -66,7 +66,7 @@ inline std::ostream &operator<<(std::ostream &os,
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const NotFormula &not_formula) {
-  return os << "not " << not_formula.data;
+  return os << "~" << *not_formula.data;
 }
 
 inline std::ostream &operator<<(std::ostream &os,

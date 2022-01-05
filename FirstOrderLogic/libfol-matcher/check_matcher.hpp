@@ -54,24 +54,23 @@ struct CheckerCrtp {
 template <typename Type, typename Checker>
 struct SimpleCompoundChecker
     : CheckerCrtp<SimpleCompoundChecker<Type, Checker>> {
+  bool check(lexer::EPS) const { return true; }
+  bool check(const PairType auto &t) const { return check(&t); }
+  bool check(const PtrPairType auto &t) const {
+    return check(t->first) || check(t->second);
+  }
+  bool check(const Type &t) const { return Checker{}(t); }
+  template <typename... Args>
+  bool check(const std::variant<Args...> &v) const {
+    return std::visit([this](const auto &a) { return check(a); }, v);
+  }
   template <typename T>
   bool check(const T &t) const {
-    if constexpr (std::is_same_v<std::decay_t<decltype(t)>, Type>) {
-      return Checker{}.check(t);
-    } else if constexpr (PairType<T>) {
-      return check(t.first);
-    } else if constexpr (PtrPairType<T>) {
-      return check(t->first);
-    } else if constexpr (!HasMemberData<T>) {
+    if constexpr (!HasMemberData<T>) {
       return false;
-    } else if constexpr (std::is_same_v<std::decay_t<decltype(t.data)>, Type>) {
-      return Checker{}.check(t.data);
-    } else if constexpr (details::utils::IsVariant<decltype(t.data)>{}) {
-      return std::visit([this](const auto &a) { return check(a); }, t.data);
     } else {
       return check(t.data);
     }
-    return false;
   }
 };
 
