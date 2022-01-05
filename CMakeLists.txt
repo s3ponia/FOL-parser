@@ -12,11 +12,11 @@ include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-include_directories(FOL-parser)
+include_directories(FirstOrderLogic)
 
 # Unit testing
-file(GLOB TEST_SOURCES "FOL-parser/tests/*.cpp")
-add_executable(tests ${TEST_SOURCES} FOL-parser/tests/main.cpp ${SOURCES})
+file(GLOB TEST_SOURCES "FirstOrderLogic/tests/*.cpp")
+add_executable(tests ${TEST_SOURCES}  ${SOURCES})
 target_link_libraries(tests ${CONAN_LIBS})
 set_target_properties(tests
         PROPERTIES
