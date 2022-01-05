@@ -195,7 +195,7 @@ inline UnaryFormula ParseFolFormula(
             ++iterator;
 
             ImplicationFormula impl = ParseImplicationFormula(iterator);
-            return {ForallFormula{
+            return {ExistsFormula{
                 {std::move(std::get<lexer::Variable>(var)), std::move(impl)}}};
           },
           [&iterator](lexer::Predicate predicate) -> UnaryFormula {
@@ -215,7 +215,7 @@ inline UnaryFormula ParseFolFormula(
             return pred;
           },
           [&](...) -> UnaryFormula {
-            return UnaryFormula{ParseImplicationFormula(iterator)};
+            throw ParseError{"Unhandled variant in unary parsing"};
           }},
       var)};
 }

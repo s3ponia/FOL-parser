@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <catch2/catch.hpp>
+#include <libfol-matcher/check_matcher.hpp>
 #include <libfol-matcher/matcher.hpp>
 #include <libfol-parser/lexer/lexer.hpp>
 #include <libfol-parser/parser/parser.hpp>
@@ -69,5 +70,22 @@ TEST_CASE("test compound matchers with ref factory functions",
   REQUIRE(name.value() == "vx");
   REQUIRE(fst_pred_name.value() == "pP1");
   REQUIRE(var.value() == "vx");
+}
+
+TEST_CASE("test check simple matchers", "[checker][matcher][fol]") {
+  REQUIRE(check::Disj().check(Parse(lexer::Tokenize("@ vx . pP1(vx)"))));
+  REQUIRE(check::Impl(check::Forall())
+              .check(Parse(lexer::Tokenize("@ vx . pP1(vx)"))));
+  REQUIRE(check::Exists().check(Parse(lexer::Tokenize("? vx . pP1(vx)"))));
+  REQUIRE(check::Pred().check(Parse(lexer::Tokenize("pP1(vx)"))));
+  REQUIRE(check::Impl().check(Parse(lexer::Tokenize("pP2(vx) -> pP1(vx)"))));
+}
+
+TEST_CASE("test check compound matchers", "[checker][matcher][fol]") {
+  auto fol_formula =
+      Parse(lexer::Tokenize("@ vx . pP1(vx)->pP2(vx)->pP3(vx)->pP4(vx)"));
+  auto checker = check::Forall(
+      check::Impl(check::Pred(), check::Impl(check::Pred(), check::Impl())));
+  REQUIRE(checker.check(fol_formula));
 }
 

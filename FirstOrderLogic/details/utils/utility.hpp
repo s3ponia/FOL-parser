@@ -3,6 +3,8 @@
 #include <cctype>
 #include <cppcoro/generator.hpp>
 #include <string_view>
+#include <type_traits>
+#include <variant>
 
 namespace fol::details::utils {
 template <typename T, typename Label>
@@ -18,6 +20,12 @@ struct TypeWithLabel : public T {
 
   ~TypeWithLabel() = default;
 };
+
+template <class T>
+struct IsVariant : std::integral_constant<bool, false> {};
+
+template <class... T>
+struct IsVariant<std::variant<T...>> : std::integral_constant<bool, true> {};
 
 inline std::string_view::size_type SkipWhiteSpaces(
     std::string_view::size_type from, std::string_view str) {

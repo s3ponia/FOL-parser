@@ -241,7 +241,8 @@ struct NotCompoundMatcher {
     if (!forall_matcher.match(std::move(o))) {
       return false;
     }
-    return matcher.match(std::move(forall_matcher.formula->data));
+    return matcher.match(
+        parser::UnaryFormula{std::move(*forall_matcher.formula->data)});
   }
   ImplMatcher matcher;
 };
@@ -544,7 +545,7 @@ inline ConjunctionMatcher Conj() { return {}; }
 template <typename FMatcher, typename SMatcher>
 inline ConjunctionCompoundMatcher<FMatcher, SMatcher> Conj(FMatcher &&lhs,
                                                            SMatcher &&rhs) {
-  return {std::forward<SMatcher>(lhs), std::forward<SMatcher>(rhs)};
+  return {std::forward<FMatcher>(lhs), std::forward<SMatcher>(rhs)};
 }
 
 inline UnaryMatcher Unary() { return {}; }
@@ -554,6 +555,13 @@ inline ExistsMatcher Exists() { return {}; }
 template <typename T>
 inline ExistsCompoundMatcher<T> Exists(T &&o) {
   return {std::forward<T>(o)};
+}
+
+inline NotMatcher Not() { return {}; }
+
+template <typename T>
+inline NotCompoundMatcher<T> Not(T &&t) {
+  return {std::forward<T>(t)};
 }
 
 inline ForallMatcher Forall() { return {}; }

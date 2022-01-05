@@ -122,9 +122,60 @@ struct UnaryFormula {
         static_cast<DisjunctionFormula>(std::move(*this))};
   }
   std::variant<BracketFormula, NotFormula, ForallFormula, ExistsFormula,
-               PredicateFormula, ImplicationFormula>
+               PredicateFormula>
       data;
 };
+
+inline BracketFormula MakeBrackets(parser::ImplicationFormula impl) {
+  return BracketFormula{std::move(impl)};
+}
+
+inline ExistsFormula MakeExists(lexer::Variable var,
+                                parser::ImplicationFormula impl) {
+  return {{std::move(var), std::move(impl)}};
+}
+
+inline ForallFormula MakeForall(lexer::Variable var,
+                                parser::ImplicationFormula impl) {
+  return {{std::move(var), std::move(impl)}};
+}
+
+inline NotFormula MakeNot(UnaryFormula unary) {
+  return {std::make_unique<UnaryFormula>(std::move(unary))};
+}
+
+inline ConjunctionFormula MakeConj(UnaryFormula unary) {
+  return {std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
+      std::move(unary), ConjuctionPrimeFormula{lexer::EPS{}})};
+}
+
+inline ConjunctionFormula MakeConj(UnaryFormula unary,
+                                   ConjunctionFormula conj) {
+  return {std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
+      std::move(unary), ConjuctionPrimeFormula{std::move(conj.data)})};
+}
+
+inline DisjunctionFormula MakeDisj(ConjunctionFormula conj) {
+  return {std::move(conj), DisjunctionPrimeFormula{lexer::EPS{}}};
+}
+
+inline DisjunctionFormula MakeDisj(ConjunctionFormula conj,
+                                   DisjunctionFormula disj) {
+  return {std::move(conj),
+          DisjunctionPrimeFormula{std::make_unique<
+              std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
+              std::move(disj.data))}};
+}
+
+inline ImplicationFormula MakeImpl(DisjunctionFormula disj) {
+  return {std::move(disj)};
+}
+
+inline ImplicationFormula MakeImpl(DisjunctionFormula disj,
+                                   ImplicationFormula impl) {
+  return {std::make_unique<std::pair<DisjunctionFormula, ImplicationFormula>>(
+      std::move(disj), std::move(impl))};
+}
 
 inline ImplicationFormula operator>>=(UnaryFormula disj,
                                       ImplicationFormula impl) {
