@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libfol-matcher/check_matcher.hpp>
 #include <libfol-matcher/matcher.hpp>
 #include <libfol-parser/parser/types.hpp>
 
