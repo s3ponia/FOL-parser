@@ -99,6 +99,7 @@ struct ConjunctionMatcher {
     if (!matcher.match(std::move(o))) {
       return false;
     }
+
     if (!std::holds_alternative<lexer::EPS>(
             matcher.formula->data.second.data)) {
       return false;
@@ -151,14 +152,8 @@ struct ConjunctionCompoundMatcher {
 
 struct UnaryMatcher {
   bool match(parser::FolFormula o) {
-    DisjunctionMatcher disj_matcher;
-    if (!disj_matcher.match(std::move(o))) {
-      return false;
-    }
-
     ConjunctionMatcher conj_matcher;
-    if (!conj_matcher.match(
-            DisjToFol(std::move(disj_matcher.formula.value())))) {
+    if (!conj_matcher.match(std::move(o))) {
       return false;
     }
 
@@ -177,7 +172,51 @@ struct UnaryMatcher {
 
     return true;
   }
+
   std::optional<parser::UnaryFormula> formula{};
+};
+
+struct BracketsMatcher {
+  bool match(parser::FolFormula o) {
+    ConjunctionMatcher conj_matcher;
+    if (!conj_matcher.match(std::move(o))) {
+      return false;
+    }
+
+    auto conj = std::move(conj_matcher.formula.value());
+
+    if (!std::holds_alternative<lexer::EPS>(conj.data->second.data)) {
+      return false;
+    }
+
+    auto formula_t = std::move(conj.data->first);
+
+    if (!std::holds_alternative<parser::BracketFormula>(formula_t.data)) {
+      formula = parser::MakeBrackets(std::move(formula_t));
+    } else {
+      formula = std::get<parser::BracketFormula>(std::move(formula_t.data));
+    }
+
+    return true;
+  }
+
+  std::optional<parser::BracketFormula> formula{};
+};
+
+template <typename T>
+struct BracketsCompoundMatcher {
+  bool match(parser::FolFormula o) {
+    BracketsMatcher brackets_matcher;
+    if (!brackets_matcher.match(std::move(o))) {
+      return false;
+    }
+
+    auto formula = std::move(brackets_matcher.formula.value());
+
+    return matcher.match(std::move(formula.data));
+  }
+
+  T matcher;
 };
 
 struct ExistsMatcher {
@@ -229,6 +268,7 @@ struct NotMatcher {
     }
 
     formula = std::get<parser::NotFormula>(std::move(unary.data));
+
     return true;
   }
 
@@ -556,6 +596,11 @@ inline ExistsMatcher Exists() { return {}; }
 template <typename NameMatcher, typename T>
 inline ExistsCompoundMatcher<NameMatcher, T> Exists(NameMatcher &&n, T &&o) {
   return {std::forward<NameMatcher>(n), std::forward<T>(o)};
+}
+
+template <typename T>
+inline BracketsCompoundMatcher<T> Brackets(T &&t) {
+  return {std::forward<T>(t)};
 }
 
 inline NotMatcher Not() { return {}; }

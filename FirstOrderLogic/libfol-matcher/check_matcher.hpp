@@ -38,11 +38,13 @@ struct SimpleCompoundCheckerImpl
   bool checkEps(const T &) const {
     return false;
   }
+
   bool checkEps(const lexer::EPS &) const { return true; }
   template <typename... Args>
   bool checkEps(const std::variant<Args...> &t) const {
     return std::visit([this](const auto &a) { return checkEps(a); }, t);
   }
+
   bool checkEps(const details::utils::HasMemberData auto &t) const {
     return checkEps(t.data);
   }
@@ -50,9 +52,11 @@ struct SimpleCompoundCheckerImpl
   bool check(const details::utils::PairType auto &t) const {
     return checkEps(t.second) && check(t.first);
   }
+
   bool check(const details::utils::Dereferencable auto &t) const {
     return check(*t);
   }
+
   bool check(const Type &t) const {
     if constexpr (details::utils::HasMemberData<Type>) {
       return Checker{}(t.data);
@@ -60,10 +64,12 @@ struct SimpleCompoundCheckerImpl
       return Checker{}(t);
     }
   }
+
   template <typename... Args>
   bool check(const std::variant<Args...> &v) const {
     return std::visit([this](const auto &a) { return check(a); }, v);
   }
+
   template <typename T>
   bool check(const T &t) const {
     if constexpr (details::utils::InList<

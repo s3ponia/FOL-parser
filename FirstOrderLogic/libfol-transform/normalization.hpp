@@ -52,6 +52,10 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     std::optional<parser::ImplicationFormula> impl_lhs;
     std::optional<parser::ImplicationFormula> impl_rhs;
 
+    matcher::Not(matcher::Brackets(matcher::Disj(matcher::RefImpl(impl_lhs),
+                                                 matcher::RefImpl(impl_rhs))))
+        .match(std::move(formula));
+
     auto conj = ~!ToConjunctionNormalForm(std::move(impl_lhs.value())) &&
                 ~!ToConjunctionNormalForm(std::move(impl_rhs.value()));
 
@@ -63,6 +67,10 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
           matcher::check::Anything(), matcher::check::Anything()))(formula)) {
     std::optional<parser::ImplicationFormula> impl_lhs;
     std::optional<parser::ImplicationFormula> impl_rhs;
+
+    matcher::Not(matcher::Brackets(matcher::Conj(matcher::RefImpl(impl_lhs),
+                                                 matcher::RefImpl(impl_rhs))))
+        .match(std::move(formula));
 
     auto conj = ~!ToConjunctionNormalForm(std::move(impl_lhs.value())) ||
                 ~!ToConjunctionNormalForm(std::move(impl_rhs.value()));
@@ -81,7 +89,8 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     var_v.base() = var.value();
 
     return parser::Exists(std::move(var_v),
-                          ToConjunctionNormalForm(std::move(impl.value())));
+                          matcher::UnaryToFol(~!ToConjunctionNormalForm(
+                              std::move(impl.value()))));
   }
 
   // ~(? vx . F) = @ vx . ~F
@@ -95,7 +104,8 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     var_v.base() = var.value();
 
     return parser::ForAll(std::move(var_v),
-                          ToConjunctionNormalForm(std::move(impl.value())));
+                          matcher::UnaryToFol(~!ToConjunctionNormalForm(
+                              std::move(impl.value()))));
   }
 
   if (matcher::check::Not()(formula)) {
