@@ -9,103 +9,101 @@
 namespace fol::transform {
 inline parser::FolFormula Normalize(parser::FolFormula formula) {}
 
-inline parser::ImplicationFormula ToConjunctionNormalForm(
-    parser::ImplicationFormula);
+inline auto Match(auto matcher, auto formula) {
+  matcher.match(std::move(formula));
+  return std::move(matcher.formula.value());
+}
 
-inline parser::UnaryFormula ToConjunctionNormalForm(
-    parser::UnaryFormula formula) {
+inline parser::ImplicationFormula ToConjunctionNormalForm(
+    parser::ImplicationFormula formula) {
+  if (matcher::check::Pred()(formula)) {
+    return formula;
+  }
+
+  // F -> G = ~ F or (G)
+  if (matcher::check::Impl(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::UnaryFormula> unary;
+    std::optional<parser::ImplicationFormula> impl;
+
+    matcher::Impl(matcher::RefUnary(unary), matcher::RefImpl(impl))
+        .match(std::move(formula));
+
+    parser::DisjunctionFormula disj_t =
+        ~Match(matcher::Unary(),
+               ToConjunctionNormalForm(std::move(unary.value()))) ||
+        !ToConjunctionNormalForm(std::move(impl.value()));
+
+    return {std::move(disj_t)};
+  }
+
   // ~(~F) = F
   if (matcher::check::Not(matcher::check::Not())(formula)) {
-    std::optional<parser::UnaryFormula> fol_formula;
-    matcher::Not(matcher::Not(matcher::RefUnary(fol_formula)))
+    std::optional<parser::ImplicationFormula> unary;
+    matcher::Not(matcher::Not(matcher::RefImpl(unary)))
         .match(std::move(formula));
-    return std::move(fol_formula.value());
+
+    return ToConjunctionNormalForm(std::move(unary.value()));
   }
 
   // ~(F or G) = ~F and ~G
   if (matcher::check::Not(matcher::check::Disj(
-          matcher::check::Conj(), matcher::check::Disj()))(formula)) {
-    std::optional<parser::ConjunctionFormula> conj;
-    std::optional<parser::DisjunctionFormula> disj;
+          matcher::check::Anything(), matcher::check::Anything()))(formula)) {
+    std::optional<parser::ImplicationFormula> impl_lhs;
+    std::optional<parser::ImplicationFormula> impl_rhs;
+
+    auto conj = ~!ToConjunctionNormalForm(std::move(impl_lhs.value())) &&
+                ~!ToConjunctionNormalForm(std::move(impl_rhs.value()));
+
+    return parser::MakeImpl(parser::MakeDisj(std::move(conj)));
+  }
+
+  // ~(F and G) = ~F or ~G
+  if (matcher::check::Not(matcher::check::Conj(
+          matcher::check::Anything(), matcher::check::Anything()))(formula)) {
+    std::optional<parser::ImplicationFormula> impl_lhs;
+    std::optional<parser::ImplicationFormula> impl_rhs;
+
+    auto conj = ~!ToConjunctionNormalForm(std::move(impl_lhs.value())) ||
+                ~!ToConjunctionNormalForm(std::move(impl_rhs.value()));
+
+    return parser::MakeImpl(std::move(conj));
+  }
+
+  // ~(@ vx . F) = ? vx . ~F
+  if (matcher::check::Not(matcher::check::Forall())(formula)) {
+    std::optional<std::string> var;
+    std::optional<parser::ImplicationFormula> impl;
+    matcher::Not(matcher::Forall(matcher::RefName(var), matcher::RefImpl(impl)))
+        .match(std::move(formula));
+
+    lexer::Variable var_v;
+    var_v.base() = var.value();
+
+    return parser::Exists(std::move(var_v),
+                          ToConjunctionNormalForm(std::move(impl.value())));
+  }
+
+  // ~(? vx . F) = @ vx . ~F
+  if (matcher::check::Not(matcher::check::Exists())(formula)) {
+    std::optional<std::string> var;
+    std::optional<parser::ImplicationFormula> impl;
+    matcher::Not(matcher::Exists(matcher::RefName(var), matcher::RefImpl(impl)))
+        .match(std::move(formula));
+
+    lexer::Variable var_v;
+    var_v.base() = var.value();
+
+    return parser::ForAll(std::move(var_v),
+                          ToConjunctionNormalForm(std::move(impl.value())));
   }
 
   if (matcher::check::Not()(formula)) {
     std::optional<parser::ImplicationFormula> impl;
     matcher::Not(matcher::RefImpl(impl)).match(std::move(formula));
-    return {parser::MakeNot({parser::MakeBrackets(
-        ToConjunctionNormalForm(std::move(impl.value())))})};
+    return matcher::UnaryToFol(
+        ~!ToConjunctionNormalForm(std::move(impl.value())));
   }
-
-  if (matcher::check::Forall()(formula)) {
-    std::optional<parser::ImplicationFormula> impl;
-    std::optional<std::string> name;
-    matcher::Forall(matcher::RefName(name), matcher::RefImpl(impl))
-        .match(std::move(formula));
-    lexer::Variable var;
-    var.base() = std::move(name.value());
-
-    return {parser::MakeForall(
-        std::move(var), ToConjunctionNormalForm(std::move(impl.value())))};
-  }
-
-  if (matcher::check::Exists()(formula)) {
-    std::optional<parser::ImplicationFormula> impl;
-    std::optional<std::string> name;
-    matcher::Exists(matcher::RefName(name), matcher::RefImpl(impl))
-        .match(std::move(formula));
-
-    return {
-        parser::MakeExists(std::move(name.value()),
-                           ToConjunctionNormalForm(std::move(impl.value())))};
-  }
-
-  return formula;
-}
-
-inline parser::ConjunctionFormula ToConjunctionNormalForm(
-    parser::ConjunctionFormula formula) {
-  std::optional<parser::UnaryFormula> unary;
-  std::optional<parser::ConjunctionFormula> conj;
-  if (matcher::Conj(matcher::RefUnary(unary), matcher::RefConj(conj))
-          .match(matcher::DisjToFol(std::move(formula)))) {
-    return parser::MakeConj(ToConjunctionNormalForm(std::move(unary.value())),
-                            std::move(conj.value()));
-  }
-
-  return parser::MakeConj(ToConjunctionNormalForm(std::move(unary.value())));
-}
-
-inline parser::DisjunctionFormula ToConjunctionNormalForm(
-    parser::DisjunctionFormula formula) {
-  std::optional<parser::ConjunctionFormula> conj;
-  std::optional<parser::DisjunctionFormula> disj;
-
-  // If not match then it matches <conj> <EPS> and saves <conj> to first param
-  if (matcher::Disj(matcher::RefConj(conj), matcher::RefDisj(disj))
-          .match(matcher::DisjToFol(std::move(formula)))) {
-    return parser::MakeDisj(ToConjunctionNormalForm(std::move(conj.value())),
-                            ToConjunctionNormalForm(std::move(disj.value())));
-  }
-
-  return parser::MakeDisj(ToConjunctionNormalForm(std::move(conj.value())));
-}
-
-inline parser::ImplicationFormula ToConjunctionNormalForm(
-    parser::ImplicationFormula formula) {
-  std::optional<parser::DisjunctionFormula> disj;
-  std::optional<parser::ImplicationFormula> impl;
-  // If not match then it saves to disj
-  // F -> G = not F or G
-  if (matcher::Impl(matcher::RefDisj(disj), matcher::RefImpl(impl))
-          .match(std::move(formula))) {
-    return parser::MakeImpl(parser::MakeDisj(
-        parser::MakeConj(
-            {parser::MakeNot({parser::MakeBrackets(parser::MakeImpl(
-                ToConjunctionNormalForm(std::move(disj.value()))))})}),
-        std::get<parser::DisjunctionFormula>(
-            ToConjunctionNormalForm(std::move(impl.value())).data)));
-  }
-  return parser::MakeImpl(ToConjunctionNormalForm(std::move(disj.value())));
 }
 
 inline parser::FolFormula ToCNF(parser::FolFormula formula) {

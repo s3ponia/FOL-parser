@@ -32,8 +32,8 @@ struct Or : CheckerCrtp<Or<Lhs, Rhs>> {
 };
 
 template <typename Type, typename Checker>
-struct SimpleCompoundChecker
-    : CheckerCrtp<SimpleCompoundChecker<Type, Checker>> {
+struct SimpleCompoundCheckerImpl
+    : CheckerCrtp<SimpleCompoundCheckerImpl<Type, Checker>> {
   template <class T>
   bool checkEps(const T &) const {
     return false;
@@ -81,6 +81,19 @@ struct SimpleCompoundChecker
     }
   }
 };
+
+template <typename T = AlwaysTrueChecker>
+using CheckBracketsCompound =
+    SimpleCompoundCheckerImpl<parser::BracketFormula, T>;
+
+using CheckBrackets = CheckBracketsCompound<>;
+
+template <typename T>
+using SkipBrackets = Or<CheckBracketsCompound<T>, T>;
+
+template <typename T, typename Checker>
+using SimpleCompoundChecker =
+    SkipBrackets<SimpleCompoundCheckerImpl<T, Checker>>;
 
 template <typename LhsChecker, typename RhsChecker>
 struct BasicPairChecker
@@ -170,8 +183,6 @@ using CheckUnary = SimpleChecker<parser::UnaryFormula>;
 
 template <typename Checker>
 using CompoundCheckUnary = SimpleCompoundChecker<parser::UnaryFormula, Checker>;
-
-using CheckBrackets = SimpleChecker<parser::BracketFormula>;
 
 template <typename Checker>
 using CompoundCheckBrackets =

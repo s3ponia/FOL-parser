@@ -113,11 +113,15 @@ struct PredicateFormula {
 };
 
 struct UnaryFormula {
+  template <typename T>
+  UnaryFormula(T&& t) : data(std::forward<T>(t)) {}
+
   operator DisjunctionFormula() && {
     return DisjunctionFormula{ConjunctionFormula{
         std::make_unique<std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
             std::move(*this), ConjunctionPrimeFormula{lexer::EPS{}})}};
   }
+
   operator ImplicationFormula() && {
     return ImplicationFormula{
         static_cast<DisjunctionFormula>(std::move(*this))};
@@ -178,11 +182,38 @@ inline ImplicationFormula MakeImpl(DisjunctionFormula disj,
       std::move(disj), std::move(impl))};
 }
 
+inline BracketFormula operator!(ImplicationFormula impl) {
+  return parser::MakeBrackets(std::move(impl));
+}
+
+inline NotFormula operator~(UnaryFormula impl) {
+  return parser::MakeNot(std::move(impl));
+}
+
 inline ImplicationFormula operator>>=(UnaryFormula disj,
                                       ImplicationFormula impl) {
   return ImplicationFormula{
       std::make_unique<std::pair<DisjunctionFormula, ImplicationFormula>>(
           std::move(disj), std::move(impl))};
+}
+
+inline DisjunctionFormula operator||(UnaryFormula conj_lhs,
+                                     UnaryFormula conj_rhs) {
+  return DisjunctionFormula{
+      MakeConj(std::move(conj_lhs)),
+      DisjunctionPrimeFormula{std::make_unique<
+          std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
+          MakeConj(std::move(conj_rhs)),
+          DisjunctionPrimeFormula{lexer::EPS{}})}};
+}
+
+inline DisjunctionFormula operator||(UnaryFormula conj_lhs,
+                                     ConjunctionFormula conj_rhs) {
+  return DisjunctionFormula{
+      MakeConj(std::move(conj_lhs)),
+      DisjunctionPrimeFormula{std::make_unique<
+          std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
+          std::move(conj_rhs), DisjunctionPrimeFormula{lexer::EPS{}})}};
 }
 
 inline DisjunctionFormula operator||(ConjunctionFormula conj_lhs,
