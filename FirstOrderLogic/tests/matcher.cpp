@@ -106,16 +106,24 @@ TEST_CASE("test not not match", "[checker][matcher][fol") {
 
 TEST_CASE("test De Morgan's laws", "[checker][matcher][fol]") {
   auto fol = Parse(lexer::Tokenize("~((pF(vx) or pG(vx)) or pS(vx))"));
-  REQUIRE(!(check::Disj(check::Anything(), check::Anything())(fol)));
-  REQUIRE(
-      check::Not(check::Disj(check::Disj(check::Anything(), check::Anything()),
-                             check::Anything()))(fol));
+  REQUIRE(!(check::Disj(check::Anything(), check::Pred())(fol)));
+  REQUIRE(check::Not(check::Disj(
+      check::Disj(check::Anything(), check::Anything()), check::Pred()))(fol));
 
   fol = Parse(lexer::Tokenize("pP1(vx) or pP3(vx)"));
   REQUIRE(check::Disj(check::Pred(), check::Pred())(fol));
 
   fol = Parse(lexer::Tokenize("pP1(vx) or pP2(vx) or pP3(vx)"));
+  REQUIRE(check::Disj(check::Anything(), check::Anything())(fol));
+  REQUIRE(check::Disj(check::Pred(), check::Anything())(fol));
+  REQUIRE(check::Disj(check::Pred(), check::Pred(), check::Anything())(fol));
   REQUIRE(check::Disj(check::Pred(), check::Pred(), check::Pred())(fol));
+
+  fol = Parse(lexer::Tokenize("pP1(vx) and pP2(vx) and pP3(vx)"));
+  REQUIRE(check::Conj(check::Anything(), check::Anything())(fol));
+  REQUIRE(check::Conj(check::Pred(), check::Anything())(fol));
+  REQUIRE(check::Conj(check::Pred(), check::Pred(), check::Anything())(fol));
+  REQUIRE(check::Conj(check::Pred(), check::Pred(), check::Pred())(fol));
 
   fol = Parse(lexer::Tokenize("~(pF(vx) and pG(vx))"));
   REQUIRE(!(check::Disj(check::Anything(), check::Anything())(fol)));

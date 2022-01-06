@@ -122,6 +122,10 @@ using CheckDisjCompound = SimpleCompoundChecker<parser::DisjunctionFormula, T>;
 
 using CheckDisj = CheckDisjCompound<>;
 
+template <typename T>
+using CompoundSnglePairDisjPrimeCheck = SimpleCompoundChecker<
+    std::pair<parser::ConjunctionFormula, parser::DisjunctionPrimeFormula>, T>;
+
 template <typename Lhs, typename Rhs>
 using CompoundCheckPairDisjPrime = PairCompoundChecker<
     std::pair<parser::ConjunctionFormula, parser::DisjunctionPrimeFormula>, Lhs,
@@ -132,26 +136,20 @@ struct CompoundCheckDisj;
 
 template <typename Lhs, typename Rhs>
 struct CompoundCheckDisj<Lhs, Rhs>
-    : Or<CheckDisjCompound<CompoundCheckPairDisjPrime<
-             Lhs,
-             CompoundCheckPairDisjPrime<
-                 Rhs, SimpleCompoundChecker<lexer::EPS, AlwaysTrueChecker>>>>,
-         CompoundCheckPairDisjPrime<
-             Lhs,
-             CompoundCheckPairDisjPrime<
-                 Rhs, SimpleCompoundChecker<lexer::EPS, AlwaysTrueChecker>>>> {
-};
+    : CompoundCheckPairDisjPrime<Lhs, CompoundSnglePairDisjPrimeCheck<Rhs>> {};
 
 template <typename Head, typename... Args>
 struct CompoundCheckDisj<Head, Args...>
-    : Or<CheckDisjCompound<
-             CompoundCheckPairDisjPrime<Head, CompoundCheckDisj<Args...>>>,
-         CompoundCheckPairDisjPrime<Head, CompoundCheckDisj<Args...>>> {};
+    : CompoundCheckPairDisjPrime<Head, CompoundCheckDisj<Args...>> {};
 
 template <typename T = AlwaysTrueChecker>
 using CheckConjCompound = SimpleCompoundChecker<parser::ConjunctionFormula, T>;
 
 using CheckConj = CheckConjCompound<>;
+
+template <typename T>
+using CompoundSnglePairConjPrimeCheck = SimpleCompoundChecker<
+    std::pair<parser::UnaryFormula, parser::ConjunctionPrimeFormula>, T>;
 
 template <typename Lhs, typename Rhs>
 using CompoundCheckPairConjPrime = PairCompoundChecker<
@@ -162,21 +160,11 @@ struct CompoundCheckConj;
 
 template <typename Lhs, typename Rhs>
 struct CompoundCheckConj<Lhs, Rhs>
-    : Or<CheckDisjCompound<CompoundCheckPairConjPrime<
-             Lhs,
-             CompoundCheckPairConjPrime<
-                 Rhs, SimpleCompoundChecker<lexer::EPS, AlwaysTrueChecker>>>>,
-         CompoundCheckPairConjPrime<
-             Lhs,
-             CompoundCheckPairConjPrime<
-                 Rhs, SimpleCompoundChecker<lexer::EPS, AlwaysTrueChecker>>>> {
-};
+    : CompoundCheckPairConjPrime<Lhs, CompoundSnglePairConjPrimeCheck<Rhs>> {};
 
 template <typename Head, typename... Args>
 struct CompoundCheckConj<Head, Args...>
-    : Or<CheckConjCompound<
-             CompoundCheckPairConjPrime<Head, CompoundCheckConj<Args...>>>,
-         CompoundCheckPairConjPrime<Head, CompoundCheckConj<Args...>>> {};
+    : CompoundCheckPairConjPrime<Head, CompoundCheckConj<Args...>> {};
 
 using CheckUnary = SimpleChecker<parser::UnaryFormula>;
 
