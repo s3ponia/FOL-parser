@@ -11,7 +11,7 @@ struct ImplicationFormula;
 struct DisjunctionFormula;
 struct DisjunctionPrimeFormula;
 struct ConjunctionFormula;
-struct ConjuctionPrimeFormula;
+struct ConjunctionPrimeFormula;
 struct UnaryFormula;
 struct PredicateFormula;
 struct FunctionFormula;
@@ -55,14 +55,15 @@ struct TermList {
   std::pair<Term, TermListPrime> data;
 };
 
-struct ConjuctionPrimeFormula {
-  std::variant<std::unique_ptr<std::pair<UnaryFormula, ConjuctionPrimeFormula>>,
-               lexer::EPS>
+struct ConjunctionPrimeFormula {
+  std::variant<
+      std::unique_ptr<std::pair<UnaryFormula, ConjunctionPrimeFormula>>,
+      lexer::EPS>
       data;
 };
 
 struct ConjunctionFormula {
-  std::unique_ptr<std::pair<UnaryFormula, ConjuctionPrimeFormula>> data;
+  std::unique_ptr<std::pair<UnaryFormula, ConjunctionPrimeFormula>> data;
 };
 
 struct DisjunctionPrimeFormula {
@@ -100,11 +101,11 @@ struct NotFormula {
 };
 
 struct ForallFormula {
-  std::pair<lexer::Variable, ImplicationFormula> data;
+  std::pair<std::string, ImplicationFormula> data;
 };
 
 struct ExistsFormula {
-  std::pair<lexer::Variable, ImplicationFormula> data;
+  std::pair<std::string, ImplicationFormula> data;
 };
 
 struct PredicateFormula {
@@ -114,8 +115,8 @@ struct PredicateFormula {
 struct UnaryFormula {
   operator DisjunctionFormula() && {
     return DisjunctionFormula{ConjunctionFormula{
-        std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
-            std::move(*this), ConjuctionPrimeFormula{lexer::EPS{}})}};
+        std::make_unique<std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
+            std::move(*this), ConjunctionPrimeFormula{lexer::EPS{}})}};
   }
   operator ImplicationFormula() && {
     return ImplicationFormula{
@@ -130,7 +131,7 @@ inline BracketFormula MakeBrackets(parser::ImplicationFormula impl) {
   return BracketFormula{std::move(impl)};
 }
 
-inline ExistsFormula MakeExists(lexer::Variable var,
+inline ExistsFormula MakeExists(std::string var,
                                 parser::ImplicationFormula impl) {
   return {{std::move(var), std::move(impl)}};
 }
@@ -145,14 +146,14 @@ inline NotFormula MakeNot(UnaryFormula unary) {
 }
 
 inline ConjunctionFormula MakeConj(UnaryFormula unary) {
-  return {std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
-      std::move(unary), ConjuctionPrimeFormula{lexer::EPS{}})};
+  return {std::make_unique<std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
+      std::move(unary), ConjunctionPrimeFormula{lexer::EPS{}})};
 }
 
 inline ConjunctionFormula MakeConj(UnaryFormula unary,
                                    ConjunctionFormula conj) {
-  return {std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
-      std::move(unary), ConjuctionPrimeFormula{std::move(conj.data)})};
+  return {std::make_unique<std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
+      std::move(unary), ConjunctionPrimeFormula{std::move(conj.data)})};
 }
 
 inline DisjunctionFormula MakeDisj(ConjunctionFormula conj) {
@@ -195,11 +196,11 @@ inline DisjunctionFormula operator||(ConjunctionFormula conj_lhs,
 
 inline ConjunctionFormula operator&&(UnaryFormula fol_lhs,
                                      UnaryFormula fol_rhs) {
-  return {std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
+  return {std::make_unique<std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
       std::move(fol_lhs),
-      ConjuctionPrimeFormula{
-          std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
-              std::move(fol_rhs), ConjuctionPrimeFormula{lexer::EPS{}})})};
+      ConjunctionPrimeFormula{
+          std::make_unique<std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
+              std::move(fol_rhs), ConjunctionPrimeFormula{lexer::EPS{}})})};
 }
 
 inline FunctionFormula operator*(lexer::Function function, TermList term_list) {

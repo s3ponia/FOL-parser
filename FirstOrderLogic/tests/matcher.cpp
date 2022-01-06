@@ -73,7 +73,7 @@ TEST_CASE("test compound matchers with ref factory functions",
 }
 
 TEST_CASE("test check simple matchers", "[checker][matcher][fol]") {
-  REQUIRE(check::Disj().check(Parse(lexer::Tokenize("@ vx . pP1(vx)"))));
+  REQUIRE(check::Forall()(Parse(lexer::Tokenize("@ vx . pP1(vx)"))));
   REQUIRE(check::Impl(check::Forall())
               .check(Parse(lexer::Tokenize("@ vx . pP1(vx)"))));
   REQUIRE(check::Exists().check(Parse(lexer::Tokenize("? vx . pP1(vx)"))));
@@ -87,5 +87,44 @@ TEST_CASE("test check compound matchers", "[checker][matcher][fol]") {
   auto checker = check::Forall(
       check::Impl(check::Pred(), check::Impl(check::Pred(), check::Impl())));
   REQUIRE(checker.check(fol_formula));
+  fol_formula =
+      Parse(lexer::Tokenize("? vx . pP1(vx)->pP2(vx)->pP3(vx)->pP4(vx)"));
+  REQUIRE(check::Exists(check::Impl(
+      check::Pred(), check::Impl(check::Pred(), check::Impl())))(fol_formula));
+
+  fol_formula = Parse(lexer::Tokenize("~ (pP1(vx)->pP2(vx))"));
+  REQUIRE(check::Impl()(fol_formula));
+  REQUIRE(!check::Impl(check::Pred(), check::Pred())(fol_formula));
+  REQUIRE(check::Not(check::Impl(check::Pred(), check::Pred()))(fol_formula));
+}
+
+TEST_CASE("test not not match", "[checker][matcher][fol") {
+  auto fol = Parse(lexer::Tokenize("~(~pP(vx))"));
+  REQUIRE(!(check::Pred()(fol)));
+  REQUIRE(check::Not(check::Not())(fol));
+}
+
+TEST_CASE("test De Morgan's laws", "[checker][matcher][fol]") {
+  auto fol = Parse(lexer::Tokenize("~((pF(vx) or pG(vx)) or pS(vx))"));
+  REQUIRE(!(check::Disj(check::Anything(), check::Anything())(fol)));
+  REQUIRE(
+      check::Not(check::Disj(check::Disj(check::Anything(), check::Anything()),
+                             check::Anything()))(fol));
+
+  fol = Parse(lexer::Tokenize("pP1(vx) or pP3(vx)"));
+  REQUIRE(check::Disj(check::Pred(), check::Pred())(fol));
+
+  fol = Parse(lexer::Tokenize("pP1(vx) or pP2(vx) or pP3(vx)"));
+  REQUIRE(check::Disj(check::Pred(), check::Pred(), check::Pred())(fol));
+
+  fol = Parse(lexer::Tokenize("~(pF(vx) and pG(vx))"));
+  REQUIRE(!(check::Disj(check::Anything(), check::Anything())(fol)));
+  REQUIRE(!(check::Conj(check::Anything(), check::Anything())(fol)));
+  REQUIRE(check::Not(check::Conj(check::Anything(), check::Anything()))(fol));
+
+  fol = Parse(lexer::Tokenize("pP1(vx) and pP2(vx) and pP3(vx) and pP4(vx)"));
+  REQUIRE(check::Conj(check::Pred(), check::Pred(), check::Pred(),
+                      check::Pred())(fol));
+  REQUIRE(!check::Conj(check::Pred(), check::Pred(), check::Pred())(fol));
 }
 

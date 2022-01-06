@@ -113,16 +113,16 @@ struct ConjunctionMatcher {
 inline parser::FolFormula UnaryToFol(parser::UnaryFormula formula) {
   return parser::FolFormula{parser::DisjunctionFormula{
       parser::ConjunctionFormula{std::make_unique<
-          std::pair<parser::UnaryFormula, parser::ConjuctionPrimeFormula>>(
-          std::move(formula), parser::ConjuctionPrimeFormula{lexer::EPS{}})},
+          std::pair<parser::UnaryFormula, parser::ConjunctionPrimeFormula>>(
+          std::move(formula), parser::ConjunctionPrimeFormula{lexer::EPS{}})},
       parser::DisjunctionPrimeFormula{lexer::EPS{}}}};
 }
 
 inline parser::ConjunctionFormula ConjPrimeToConj(
-    parser::ConjuctionPrimeFormula formula) {
+    parser::ConjunctionPrimeFormula formula) {
   return parser::ConjunctionFormula{std::move(
       std::get<std::unique_ptr<
-          std::pair<parser::UnaryFormula, parser::ConjuctionPrimeFormula>>>(
+          std::pair<parser::UnaryFormula, parser::ConjunctionPrimeFormula>>>(
           formula.data))};
 }
 
@@ -200,17 +200,18 @@ struct ExistsMatcher {
   std::optional<parser::ExistsFormula> formula{};
 };
 
-template <typename ImplMatcher>
+template <typename NameMatcher, typename ImplMatcher>
 struct ExistsCompoundMatcher {
   bool match(parser::FolFormula o) {
     ExistsMatcher exists_matcher;
     if (!exists_matcher.match(std::move(o))) {
       return false;
     }
-    var = std::move(exists_matcher.formula->data.first);
+    var.match(std::move(exists_matcher.formula->data.first));
     return matcher.match(std::move(exists_matcher.formula->data.second));
   }
-  std::optional<lexer::Variable> var;
+
+  NameMatcher var;
   ImplMatcher matcher;
 };
 
@@ -552,9 +553,9 @@ inline UnaryMatcher Unary() { return {}; }
 
 inline ExistsMatcher Exists() { return {}; }
 
-template <typename T>
-inline ExistsCompoundMatcher<T> Exists(T &&o) {
-  return {std::forward<T>(o)};
+template <typename NameMatcher, typename T>
+inline ExistsCompoundMatcher<NameMatcher, T> Exists(NameMatcher &&n, T &&o) {
+  return {std::forward<NameMatcher>(n), std::forward<T>(o)};
 }
 
 inline NotMatcher Not() { return {}; }

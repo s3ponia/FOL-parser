@@ -11,7 +11,7 @@ Parser follows following grammar rules
 <conj'>       ::= and <unary> <conj'>
                 | EPS
 <unary>       ::= ( <impl> )
-                | not unary
+                | ~ unary
                 | @ <var> . <impl>
                 | ? <var> . <impl>
                 | <pred> (<term_list>)

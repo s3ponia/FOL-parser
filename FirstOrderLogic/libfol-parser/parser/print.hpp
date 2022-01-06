@@ -9,12 +9,12 @@ inline std::ostream &operator<<(std::ostream &, const UnaryFormula &);
 inline std::ostream &operator<<(std::ostream &, const TermList &);
 
 inline std::ostream &operator<<(std::ostream &os,
-                                const ConjuctionPrimeFormula &conj_prime) {
+                                const ConjunctionPrimeFormula &conj_prime) {
   return std::visit(
       details::utils::Overloaded{
           [&](lexer::EPS) -> std::ostream & { return os << lexer::EPS{}; },
           [&](const std::unique_ptr<
-              std::pair<UnaryFormula, ConjuctionPrimeFormula>> &ptr)
+              std::pair<UnaryFormula, ConjunctionPrimeFormula>> &ptr)
               -> std::ostream & {
             return os << " and " << ptr->first << ptr->second;
           }},

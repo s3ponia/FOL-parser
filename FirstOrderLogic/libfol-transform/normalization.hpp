@@ -15,7 +15,7 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
 inline parser::UnaryFormula ToConjunctionNormalForm(
     parser::UnaryFormula formula) {
   // ~(~F) = F
-  if (matcher::check::CheckNot(matcher::check::CheckNot())(formula)) {
+  if (matcher::check::Not(matcher::check::Not())(formula)) {
     std::optional<parser::UnaryFormula> fol_formula;
     matcher::Not(matcher::Not(matcher::RefUnary(fol_formula)))
         .match(std::move(formula));
@@ -23,6 +23,43 @@ inline parser::UnaryFormula ToConjunctionNormalForm(
   }
 
   // ~(F or G) = ~F and ~G
+  if (matcher::check::Not(matcher::check::Disj(
+          matcher::check::Conj(), matcher::check::Disj()))(formula)) {
+    std::optional<parser::ConjunctionFormula> conj;
+    std::optional<parser::DisjunctionFormula> disj;
+  }
+
+  if (matcher::check::Not()(formula)) {
+    std::optional<parser::ImplicationFormula> impl;
+    matcher::Not(matcher::RefImpl(impl)).match(std::move(formula));
+    return {parser::MakeNot({parser::MakeBrackets(
+        ToConjunctionNormalForm(std::move(impl.value())))})};
+  }
+
+  if (matcher::check::Forall()(formula)) {
+    std::optional<parser::ImplicationFormula> impl;
+    std::optional<std::string> name;
+    matcher::Forall(matcher::RefName(name), matcher::RefImpl(impl))
+        .match(std::move(formula));
+    lexer::Variable var;
+    var.base() = std::move(name.value());
+
+    return {parser::MakeForall(
+        std::move(var), ToConjunctionNormalForm(std::move(impl.value())))};
+  }
+
+  if (matcher::check::Exists()(formula)) {
+    std::optional<parser::ImplicationFormula> impl;
+    std::optional<std::string> name;
+    matcher::Exists(matcher::RefName(name), matcher::RefImpl(impl))
+        .match(std::move(formula));
+
+    return {
+        parser::MakeExists(std::move(name.value()),
+                           ToConjunctionNormalForm(std::move(impl.value())))};
+  }
+
+  return formula;
 }
 
 inline parser::ConjunctionFormula ToConjunctionNormalForm(

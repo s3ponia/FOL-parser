@@ -12,31 +12,8 @@
 
 namespace fol::matcher::check {
 struct AlwaysTrueChecker {
-  template <typename T>
-  bool operator()(const T &t) const {
-    return check(t);
-  }
-  template <typename T>
-  bool check(T &&) const {
-    return true;
-  }
-};
-
-template <typename T>
-concept HasMemberData = requires(T t) {
-  t.data;
-};
-
-template <typename T>
-concept PtrPairType = requires(T t) {
-  t->first;
-  t->second;
-};
-
-template <typename T>
-concept PairType = requires(T t) {
-  t.first;
-  t.second;
+  bool operator()(const auto &t) const { return check(t); }
+  bool check(auto &&) const { return true; }
 };
 
 template <typename T>
@@ -45,28 +22,59 @@ struct CheckerCrtp {
   bool operator()(const A &a) const {
     return check(a);
   }
-  template <typename A>
-  bool check(const A &a) const {
-    return static_cast<T>(*this).check(a);
-  }
+
+  bool check(const auto &a) const { return static_cast<T>(*this).check(a); }
+};
+
+template <typename Lhs, typename Rhs>
+struct Or : CheckerCrtp<Or<Lhs, Rhs>> {
+  bool check(const auto &a) const { return Lhs{}(a) || Rhs{}(a); }
 };
 
 template <typename Type, typename Checker>
 struct SimpleCompoundChecker
     : CheckerCrtp<SimpleCompoundChecker<Type, Checker>> {
-  bool check(lexer::EPS) const { return true; }
-  bool check(const PairType auto &t) const { return check(&t); }
-  bool check(const PtrPairType auto &t) const {
-    return check(t->first) || check(t->second);
+  template <class T>
+  bool checkEps(const T &) const {
+    return false;
   }
-  bool check(const Type &t) const { return Checker{}(t); }
+  bool checkEps(const lexer::EPS &) const { return true; }
+  template <typename... Args>
+  bool checkEps(const std::variant<Args...> &t) const {
+    return std::visit([this](const auto &a) { return checkEps(a); }, t);
+  }
+  bool checkEps(const details::utils::HasMemberData auto &t) const {
+    return checkEps(t.data);
+  }
+
+  bool check(const details::utils::PairType auto &t) const {
+    return checkEps(t.second) && check(t.first);
+  }
+  bool check(const details::utils::Dereferencable auto &t) const {
+    return check(*t);
+  }
+  bool check(const Type &t) const {
+    if constexpr (details::utils::HasMemberData<Type>) {
+      return Checker{}(t.data);
+    } else {
+      return Checker{}(t);
+    }
+  }
   template <typename... Args>
   bool check(const std::variant<Args...> &v) const {
     return std::visit([this](const auto &a) { return check(a); }, v);
   }
   template <typename T>
   bool check(const T &t) const {
-    if constexpr (!HasMemberData<T>) {
+    if constexpr (details::utils::InList<
+                      T, parser::NotFormula, parser::ForallFormula,
+                      parser::ExistsFormula, parser::PredicateFormula>) {
+      return false;
+    }
+    if constexpr (!details::utils::HasMemberData<T>) {
+      if constexpr (details::utils::Dereferencable<T>) {
+        return check(*t);
+      }
       return false;
     } else {
       return check(t.data);
@@ -74,53 +82,24 @@ struct SimpleCompoundChecker
   }
 };
 
-template <typename PairType, typename LhsChecker, typename RhsChecker>
-struct PairCompoundChecker {
-  template <typename T>
-  bool operator()(const T &t) const {
-    return check(t);
+template <typename LhsChecker, typename RhsChecker>
+struct BasicPairChecker
+    : CheckerCrtp<BasicPairChecker<LhsChecker, RhsChecker>> {
+  bool check(const details::utils::PtrPairType auto &t) const {
+    return check(*t);
   }
-  template <typename T>
-  bool check(const T &t) const {
-    if constexpr (std::is_same_v<std::decay_t<decltype(t.data)>, PairType>) {
-      return LhsChecker{}.check(t.data.first) &&
-             RhsChecker{}.check(t.data.second);
-    } else if constexpr (details::utils::IsVariant<decltype(t.data)>{}) {
-      return std::visit(
-          details::utils::Overloaded{[](const PairType &t) {
-                                       return LhsChecker{}(t.first) &&
-                                              RhsChecker{}(t.second);
-                                     },
-                                     [](auto &&) { return false; }},
-          t.data);
-    } else {
-      return false;
-    }
+  bool check(const details::utils::PairType auto &t) const {
+    return LhsChecker{}(t.first) && RhsChecker{}(t.second);
   }
 };
 
 template <typename PairType, typename LhsChecker, typename RhsChecker>
-struct PairCompoundChecker<std::unique_ptr<PairType>, LhsChecker, RhsChecker> {
-  template <typename T>
-  bool operator()(const T &t) const {
-    return check(t);
-  }
+struct PairCompoundChecker
+    : CheckerCrtp<PairCompoundChecker<PairType, LhsChecker, RhsChecker>> {
   template <typename T>
   bool check(const T &t) const {
-    if constexpr (std::is_same_v<std::decay_t<decltype(t.data)>, PairType>) {
-      return LhsChecker{}.check(t.data.first) &&
-             RhsChecker{}.check(t.data.second);
-    } else if constexpr (details::utils::IsVariant<decltype(t.data)>{}) {
-      return std::visit(
-          details::utils::Overloaded{[](const std::unique_ptr<PairType> &t) {
-                                       return LhsChecker{}(t->first) &&
-                                              RhsChecker{}(t->second);
-                                     },
-                                     [](auto &&) { return false; }},
-          t.data);
-    } else {
-      return false;
-    }
+    return SimpleCompoundChecker<PairType,
+                                 BasicPairChecker<LhsChecker, RhsChecker>>{}(t);
   }
 };
 
@@ -134,35 +113,70 @@ using SimpleCompoundCheckImpl =
     SimpleCompoundChecker<parser::ImplicationFormula, Checker>;
 
 template <typename Lhs, typename Rhs>
-using CompoundCheckImpl = SimpleCompoundCheckImpl<
-    PairCompoundChecker<std::unique_ptr<std::pair<parser::DisjunctionFormula,
-                                                  parser::ImplicationFormula>>,
-                        Lhs, Rhs>>;
+using CompoundCheckImpl = SimpleCompoundCheckImpl<PairCompoundChecker<
+    std::pair<parser::DisjunctionFormula, parser::ImplicationFormula>, Lhs,
+    Rhs>>;
 
-using CheckDisj = SimpleChecker<parser::DisjunctionFormula>;
+template <typename T = AlwaysTrueChecker>
+using CheckDisjCompound = SimpleCompoundChecker<parser::DisjunctionFormula, T>;
 
-template <typename Lhs, typename Rhs>
-using CompoundCheckDisj = SimpleCompoundChecker<
-    parser::DisjunctionFormula,
-    PairCompoundChecker<
-        std::pair<parser::ConjunctionFormula, parser::DisjunctionPrimeFormula>,
-        Lhs,
-        PairCompoundChecker<std::pair<parser::ConjunctionFormula,
-                                      parser::DisjunctionPrimeFormula>,
-                            Rhs, AlwaysTrueChecker>>>;
-
-using CheckConj = SimpleChecker<parser::ConjunctionFormula>;
+using CheckDisj = CheckDisjCompound<>;
 
 template <typename Lhs, typename Rhs>
-using CompoundCheckConj = SimpleCompoundChecker<
-    parser::DisjunctionFormula,
-    PairCompoundChecker<
-        std::unique_ptr<std::pair<parser::ConjunctionFormula,
-                                  parser::DisjunctionPrimeFormula>>,
-        Lhs,
-        PairCompoundChecker<
-            std::pair<parser::UnaryFormula, parser::ConjuctionPrimeFormula>,
-            Rhs, AlwaysTrueChecker>>>;
+using CompoundCheckPairDisjPrime = PairCompoundChecker<
+    std::pair<parser::ConjunctionFormula, parser::DisjunctionPrimeFormula>, Lhs,
+    Rhs>;
+
+template <typename...>
+struct CompoundCheckDisj;
+
+template <typename Lhs, typename Rhs>
+struct CompoundCheckDisj<Lhs, Rhs>
+    : Or<CheckDisjCompound<CompoundCheckPairDisjPrime<
+             Lhs,
+             CompoundCheckPairDisjPrime<
+                 Rhs, SimpleCompoundChecker<lexer::EPS, AlwaysTrueChecker>>>>,
+         CompoundCheckPairDisjPrime<
+             Lhs,
+             CompoundCheckPairDisjPrime<
+                 Rhs, SimpleCompoundChecker<lexer::EPS, AlwaysTrueChecker>>>> {
+};
+
+template <typename Head, typename... Args>
+struct CompoundCheckDisj<Head, Args...>
+    : Or<CheckDisjCompound<
+             CompoundCheckPairDisjPrime<Head, CompoundCheckDisj<Args...>>>,
+         CompoundCheckPairDisjPrime<Head, CompoundCheckDisj<Args...>>> {};
+
+template <typename T = AlwaysTrueChecker>
+using CheckConjCompound = SimpleCompoundChecker<parser::ConjunctionFormula, T>;
+
+using CheckConj = CheckConjCompound<>;
+
+template <typename Lhs, typename Rhs>
+using CompoundCheckPairConjPrime = PairCompoundChecker<
+    std::pair<parser::UnaryFormula, parser::ConjunctionPrimeFormula>, Lhs, Rhs>;
+
+template <typename...>
+struct CompoundCheckConj;
+
+template <typename Lhs, typename Rhs>
+struct CompoundCheckConj<Lhs, Rhs>
+    : Or<CheckDisjCompound<CompoundCheckPairConjPrime<
+             Lhs,
+             CompoundCheckPairConjPrime<
+                 Rhs, SimpleCompoundChecker<lexer::EPS, AlwaysTrueChecker>>>>,
+         CompoundCheckPairConjPrime<
+             Lhs,
+             CompoundCheckPairConjPrime<
+                 Rhs, SimpleCompoundChecker<lexer::EPS, AlwaysTrueChecker>>>> {
+};
+
+template <typename Head, typename... Args>
+struct CompoundCheckConj<Head, Args...>
+    : Or<CheckConjCompound<
+             CompoundCheckPairConjPrime<Head, CompoundCheckConj<Args...>>>,
+         CompoundCheckPairConjPrime<Head, CompoundCheckConj<Args...>>> {};
 
 using CheckUnary = SimpleChecker<parser::UnaryFormula>;
 
@@ -185,7 +199,7 @@ using CheckForall = SimpleChecker<parser::ForallFormula>;
 template <typename Checker>
 using CompoundCheckForall = SimpleCompoundChecker<
     parser::ForallFormula,
-    PairCompoundChecker<std::pair<lexer::Variable, parser::ImplicationFormula>,
+    PairCompoundChecker<std::pair<std::string, parser::ImplicationFormula>,
                         AlwaysTrueChecker, Checker>>;
 
 using CheckExists = SimpleChecker<parser::ExistsFormula>;
@@ -193,7 +207,7 @@ using CheckExists = SimpleChecker<parser::ExistsFormula>;
 template <typename Checker>
 using CompoundCheckExists = SimpleCompoundChecker<
     parser::ExistsFormula,
-    PairCompoundChecker<std::pair<lexer::Variable, parser::ImplicationFormula>,
+    PairCompoundChecker<std::pair<std::string, parser::ImplicationFormula>,
                         AlwaysTrueChecker, Checker>>;
 
 using CheckPred = SimpleChecker<parser::PredicateFormula>;
@@ -226,9 +240,19 @@ inline SimpleCompoundCheckImpl<T> Impl(T) {
 }
 
 DECL_CHECK_PAIR_FAC_FUN(CheckDisj, Disj)
+template <typename... T>
+inline CompoundCheckDisj<T...> Disj(T...) {
+  return {};
+}
+template <typename... T>
+inline CompoundCheckConj<T...> Conj(T...) {
+  return {};
+}
+
 DECL_CHECK_PAIR_FAC_FUN(CheckConj, Conj)
 
 inline CheckUnary Unary() { return {}; }
+inline AlwaysTrueChecker Anything() { return {}; }
 
 DECL_CHECK_FAC_FUN(CheckBrackets, Brackets)
 DECL_CHECK_FAC_FUN(CheckNot, Not)

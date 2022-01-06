@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cppcoro/generator.hpp>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <variant>
 
@@ -18,14 +19,67 @@ struct TypeWithLabel : public T {
   TypeWithLabel &operator=(TypeWithLabel &&) noexcept(
       noexcept(std::declval<T>() = std::declval<T &&>())) = default;
 
+  T &base() { return *this; }
+
+  const T &base() const { return *this; }
+
   ~TypeWithLabel() = default;
+};
+
+template <typename>
+struct ToTuple;
+
+template <template <typename...> typename TupleType, typename... Args>
+struct ToTuple<TupleType<Args...>> : std::type_identity<std::tuple<Args...>> {};
+
+template <std::size_t... Indices, typename... TupleElems>
+auto SubTupleImpl(std::index_sequence<Indices...>,
+                  const std::tuple<TupleElems...> &t) {
+  return std::make_tuple(std::get<Indices>(t)...);
+}
+
+template <typename IndexSequence, typename TupleType>
+struct SubTuple
+    : std::type_identity<decltype(SubTupleImpl(IndexSequence{}, TupleType{}))> {
+};
+
+template <template <typename...> typename Type, typename Tuple>
+struct Apply;
+
+template <template <typename...> typename Type, typename... TupleElems>
+struct Apply<Type, std::tuple<TupleElems...>>
+    : std::type_identity<Type<TupleElems...>> {};
+
+template <typename T, typename... TypeList>
+concept InList = (std::is_same_v<T, TypeList> || ...);
+
+template <typename T>
+concept HasMemberData = requires(T t) {
+  t.data;
+};
+
+template <typename T>
+concept Dereferencable = requires(T t) {
+  *t;
+};
+
+template <typename T>
+concept PtrPairType = requires(T t) {
+  t->first;
+  t->second;
+};
+
+template <typename T>
+concept PairType = requires(T t) {
+  t.first;
+  t.second;
 };
 
 template <class T>
 struct IsVariant : std::integral_constant<bool, false> {};
 
 template <class... T>
-struct IsVariant<std::variant<T...>> : std::integral_constant<bool, true> {};
+struct IsVariant<std::variant<T...>> : std::integral_constant<bool, false> {};
 
 inline std::string_view::size_type SkipWhiteSpaces(
     std::string_view::size_type from, std::string_view str) {

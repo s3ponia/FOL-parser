@@ -12,6 +12,10 @@ void TestParsing(std::string str) {
   REQUIRE(ToString(Parse(fol::lexer::Tokenize(str))) == str);
 }
 
+TEST_CASE("test multiple disj", "[parser][fol]") {
+  TestParsing("pP1(vx) or pP2(vx) or pP3(vx) or pP4(vx)");
+}
+
 TEST_CASE("test not parsing", "[parser][fol") {
   TestParsing("@ vx . ~(~pP1(vx) and pP2(vx))");
   TestParsing("~pP2(vx) or (pP3(vy)->~pP4(vz))");

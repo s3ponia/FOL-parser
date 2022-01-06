@@ -22,7 +22,7 @@ inline DisjunctionPrimeFormula ParseDisjunctionPrimeFormula(
     lexer::LexemeGenerator::iterator &iterator);
 inline ConjunctionFormula ParseConjuctionFormula(
     lexer::LexemeGenerator::iterator &iterator);
-inline ConjuctionPrimeFormula ParseConjuctionPrimeFormula(
+inline ConjunctionPrimeFormula ParseConjuctionPrimeFormula(
     lexer::LexemeGenerator::iterator &iterator);
 
 inline Term ParseTerm(lexer::LexemeGenerator::iterator &iterator) {
@@ -74,20 +74,20 @@ inline TermList ParseTermList(lexer::LexemeGenerator::iterator &iterator) {
   return TermList{ParseTerm(iterator), ParseTermListPrime(iterator)};
 }
 
-inline ConjuctionPrimeFormula ParseConjuctionPrimeFormula(
+inline ConjunctionPrimeFormula ParseConjuctionPrimeFormula(
     lexer::LexemeGenerator::iterator &iterator) {
   auto var = *iterator;
   return std::visit(
       details::utils::Overloaded{
-          [&](lexer::And) -> ConjuctionPrimeFormula {
+          [&](lexer::And) -> ConjunctionPrimeFormula {
             ++iterator;
             auto fol_formula = ParseFolFormula(iterator);
             auto conj_prime = ParseConjuctionPrimeFormula(iterator);
             return {std::make_unique<
-                std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
+                std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
                 std::move(fol_formula), std::move(conj_prime))};
           },
-          [](...) -> ConjuctionPrimeFormula { return {lexer::EPS{}}; }},
+          [](...) -> ConjunctionPrimeFormula { return {lexer::EPS{}}; }},
       var);
 }
 
@@ -95,7 +95,7 @@ inline ConjunctionFormula ParseConjuctionFormula(
     lexer::LexemeGenerator::iterator &iterator) {
   auto fol_formula = ParseFolFormula(iterator);
   auto conj_prime = ParseConjuctionPrimeFormula(iterator);
-  return {std::make_unique<std::pair<UnaryFormula, ConjuctionPrimeFormula>>(
+  return {std::make_unique<std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
       std::move(fol_formula), std::move(conj_prime))};
 }
 
