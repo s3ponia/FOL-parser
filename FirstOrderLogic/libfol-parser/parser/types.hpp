@@ -194,6 +194,20 @@ inline NotFormula operator~(UnaryFormula impl) {
   return parser::MakeNot(std::move(impl));
 }
 
+inline ImplicationFormula operator>>=(ConjunctionFormula disj,
+                                      ImplicationFormula impl) {
+  return ImplicationFormula{
+      std::make_unique<std::pair<DisjunctionFormula, ImplicationFormula>>(
+          std::move(disj), std::move(impl))};
+}
+
+inline ImplicationFormula operator>>=(DisjunctionFormula disj,
+                                      ImplicationFormula impl) {
+  return ImplicationFormula{
+      std::make_unique<std::pair<DisjunctionFormula, ImplicationFormula>>(
+          std::move(disj), std::move(impl))};
+}
+
 inline ImplicationFormula operator>>=(UnaryFormula disj,
                                       ImplicationFormula impl) {
   return ImplicationFormula{
@@ -205,6 +219,16 @@ inline DisjunctionFormula operator||(UnaryFormula conj_lhs,
                                      UnaryFormula conj_rhs) {
   return DisjunctionFormula{
       MakeConj(std::move(conj_lhs)),
+      DisjunctionPrimeFormula{std::make_unique<
+          std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
+          MakeConj(std::move(conj_rhs)),
+          DisjunctionPrimeFormula{lexer::EPS{}})}};
+}
+
+inline DisjunctionFormula operator||(ConjunctionFormula conj_lhs,
+                                     UnaryFormula conj_rhs) {
+  return DisjunctionFormula{
+      std::move(conj_lhs),
       DisjunctionPrimeFormula{std::make_unique<
           std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
           MakeConj(std::move(conj_rhs)),

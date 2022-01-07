@@ -32,10 +32,8 @@ inline parser::ImplicationFormula DropAllOutBrackets(
   return formula;
 }
 
-inline parser::ImplicationFormula ToConjunctionNormalForm(
+inline parser::ImplicationFormula DropAllBracketsInNot(
     parser::ImplicationFormula formula) {
-  formula = DropAllOutBrackets(std::move(formula));
-
   // ~(((...(F)...))) = ~(F)
   if (matcher::check::Not(matcher::check::Brackets())(formula)) {
     std::optional<parser::ImplicationFormula> impl;
@@ -45,6 +43,14 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     formula =
         matcher::UnaryToFol(~!DropAllOutBrackets(std::move(impl.value())));
   }
+  return formula;
+}
+
+inline parser::ImplicationFormula ToConjunctionNormalForm(
+    parser::ImplicationFormula formula) {
+  formula = DropAllOutBrackets(std::move(formula));
+
+  formula = DropAllBracketsInNot(std::move(formula));
 
   // Pred | ~Pred | [~]Pred or [~]Pred ::= <<end>>
   auto pred_checker = matcher::check::OrMatch(
@@ -247,8 +253,91 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
   return formula;
 }
 
+inline parser::FolFormula DeleteUselessBrackets(parser::FolFormula formula) {
+  formula = DropAllOutBrackets(std::move(formula));
+  formula = DropAllBracketsInNot(std::move(formula));
+
+  // ~(<pred>) = ~<pred>
+  if (matcher::check::Not(matcher::check::Brackets(matcher::check::Pred()))(
+          formula)) {
+    std::optional<parser::PredicateFormula> pred;
+    matcher::Not(matcher::Brackets(matcher::RefPred(pred)))
+        .match(std::move(formula));
+
+    return matcher::UnaryToFol(~std::move(pred.value()));
+  }
+
+  // (<pred>) = <pred>
+  if (matcher::check::Brackets(matcher::check::Pred())(formula)) {
+    std::optional<parser::PredicateFormula> pred;
+    matcher::Brackets(matcher::RefPred(pred)).match(std::move(formula));
+
+    return matcher::UnaryToFol(std::move(pred.value()));
+  }
+
+  if (matcher::check::Not()(formula)) {
+    std::optional<parser::ImplicationFormula> impl;
+    matcher::Not(matcher::RefImpl(impl)).match(std::move(formula));
+
+    return matcher::UnaryToFol(
+        ~!DeleteUselessBrackets(std::move(impl.value())));
+  }
+
+  if (matcher::check::Forall()(formula)) {
+    std::optional<parser::ImplicationFormula> impl;
+    std::optional<std::string> var_name;
+    matcher::Forall(matcher::RefName(var_name), matcher::RefImpl(impl))
+        .match(std::move(formula));
+
+    lexer::Variable var_v;
+    var_v.base() = var_name.value();
+
+    return parser::ForAll(std::move(var_v),
+                          DeleteUselessBrackets(std::move(impl.value())));
+  }
+
+  if (matcher::check::Exists()(formula)) {
+    std::optional<parser::ImplicationFormula> impl;
+    std::optional<std::string> var_name;
+    matcher::Exists(matcher::RefName(var_name), matcher::RefImpl(impl))
+        .match(std::move(formula));
+
+    lexer::Variable var_v;
+    var_v.base() = var_name.value();
+
+    return parser::Exists(std::move(var_v),
+                          DeleteUselessBrackets(std::move(impl.value())));
+  }
+
+  if (matcher::check::Disj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::ImplicationFormula> lhs;
+    std::optional<parser::ImplicationFormula> rhs;
+
+    matcher::Disj(matcher::RefImpl(lhs), matcher::RefImpl(rhs))
+        .match(std::move(formula));
+
+    return {!DeleteUselessBrackets(std::move(lhs.value())) ||
+            !DeleteUselessBrackets(std::move(rhs.value()))};
+  }
+
+  if (matcher::check::Conj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::ImplicationFormula> lhs;
+    std::optional<parser::ImplicationFormula> rhs;
+
+    matcher::Conj(matcher::RefImpl(lhs), matcher::RefImpl(rhs))
+        .match(std::move(formula));
+
+    return {!DeleteUselessBrackets(std::move(lhs.value())) &&
+            !DeleteUselessBrackets(std::move(rhs.value()))};
+  }
+
+  return DropAllOutBrackets(std::move(formula));
+}
+
 inline parser::FolFormula ToCNF(parser::FolFormula formula) {
-  return ToConjunctionNormalForm(std::move(formula));
+  return DeleteUselessBrackets(ToConjunctionNormalForm(std::move(formula)));
 }
 
 }  // namespace fol::transform
