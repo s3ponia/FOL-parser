@@ -89,5 +89,8 @@ TEST_CASE("test complex patterns", "[transform][fol]") {
   fol = Parse(
       lexer::Tokenize("(p1(v1)->p2(v2)) and ((~p2(v2)->p3(v3))->~p1(v1))"));
   std::cout << transform::ToCNF(std::move(fol)) << std::endl;
+
+  fol = Parse(lexer::Tokenize("(p1(v1) and p2(v2)) or (p3(v3) and p4(v4))"));
+  std::cout << transform::ToCNF(std::move(fol)) << std::endl;
 }
 

@@ -178,9 +178,25 @@ struct UnaryMatcher {
 
 struct BracketsMatcher {
   bool match(parser::FolFormula o) {
+    if (!std::holds_alternative<parser::DisjunctionFormula>(o.data)) {
+      formula = parser::MakeBrackets(std::move(o));
+      return true;
+    }
+
+    DisjunctionMatcher disj_matcher;
+    if (!disj_matcher.match(std::move(o))) {
+      std::terminate();
+    }
+
+    if (!std::holds_alternative<lexer::EPS>(
+            disj_matcher.formula->data.second.data)) {
+      formula = parser::MakeBrackets({std::move(disj_matcher.formula.value())});
+      return true;
+    }
+
     ConjunctionMatcher conj_matcher;
-    if (!conj_matcher.match(std::move(o))) {
-      return false;
+    if (!conj_matcher.match({std::move(disj_matcher.formula.value())})) {
+      std::terminate();
     }
 
     auto conj = std::move(conj_matcher.formula.value());
@@ -582,16 +598,16 @@ inline ImplicationCompoundMatcher<FMatcher, SMatcher> Impl(FMatcher &&lhs,
 inline DisjunctionMatcher Disj() { return {}; }
 
 template <typename FMatcher, typename SMatcher>
-inline DisjunctionCompoundMatcher<FMatcher, SMatcher> Disj(FMatcher &&lhs,
-                                                           SMatcher &&rhs) {
+inline BracketsCompoundMatcher<DisjunctionCompoundMatcher<FMatcher, SMatcher>>
+Disj(FMatcher &&lhs, SMatcher &&rhs) {
   return {std::forward<FMatcher>(lhs), std::forward<SMatcher>(rhs)};
 }
 
 inline ConjunctionMatcher Conj() { return {}; }
 
 template <typename FMatcher, typename SMatcher>
-inline ConjunctionCompoundMatcher<FMatcher, SMatcher> Conj(FMatcher &&lhs,
-                                                           SMatcher &&rhs) {
+inline BracketsCompoundMatcher<ConjunctionCompoundMatcher<FMatcher, SMatcher>>
+Conj(FMatcher &&lhs, SMatcher &&rhs) {
   return {std::forward<FMatcher>(lhs), std::forward<SMatcher>(rhs)};
 }
 

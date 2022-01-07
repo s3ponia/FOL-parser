@@ -56,6 +56,7 @@ TEST_CASE("test compound matchers with factory functions", "[matcher][fol]") {
 
   fol_formula =
       Parse(lexer::Tokenize("((~(p3(v3))) and (~(p4(v4)))) or (~p1(v1))"));
+  std::cout << fol_formula << std::endl;
   REQUIRE(Disj(Brackets(Conj(Impl(), Impl())), Impl())
               .match(std::move(fol_formula)));
 }
