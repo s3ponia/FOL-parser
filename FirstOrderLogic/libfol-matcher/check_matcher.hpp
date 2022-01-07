@@ -254,6 +254,11 @@ inline CompoundCheckConj<T...> Conj(T...) {
   return {};
 }
 
+template <typename Lhs, typename Rhs>
+inline Or<Lhs, Rhs> OrMatch(Lhs, Rhs) {
+  return {};
+}
+
 DECL_CHECK_PAIR_FAC_FUN(CheckConj, Conj)
 
 inline CheckUnary Unary() { return {}; }

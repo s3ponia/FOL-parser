@@ -186,7 +186,8 @@ struct BracketsMatcher {
     auto conj = std::move(conj_matcher.formula.value());
 
     if (!std::holds_alternative<lexer::EPS>(conj.data->second.data)) {
-      return false;
+      formula = parser::MakeBrackets({parser::MakeDisj(std::move(conj))});
+      return true;
     }
 
     auto formula_t = std::move(conj.data->first);
@@ -565,6 +566,11 @@ inline RefFunctionMatcher RefFunc(std::optional<parser::FunctionFormula> &res) {
   return {res};
 }
 
+template <typename T>
+inline BracketsCompoundMatcher<T> Brackets(T &&t) {
+  return {std::forward<T>(t)};
+}
+
 inline ImplicationMatcher Impl() { return {}; }
 
 template <typename FMatcher, typename SMatcher>
@@ -596,11 +602,6 @@ inline ExistsMatcher Exists() { return {}; }
 template <typename NameMatcher, typename T>
 inline ExistsCompoundMatcher<NameMatcher, T> Exists(NameMatcher &&n, T &&o) {
   return {std::forward<NameMatcher>(n), std::forward<T>(o)};
-}
-
-template <typename T>
-inline BracketsCompoundMatcher<T> Brackets(T &&t) {
-  return {std::forward<T>(t)};
 }
 
 inline NotMatcher Not() { return {}; }

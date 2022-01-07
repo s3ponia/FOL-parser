@@ -53,6 +53,11 @@ TEST_CASE("test compound matchers with factory functions", "[matcher][fol]") {
   REQUIRE(matcher.var.formula == "vx");
   REQUIRE(matcher.matcher.first.predicate_name.formula == "pP1");
   REQUIRE(matcher.matcher.first.term_list.formula == "vx");
+
+  fol_formula =
+      Parse(lexer::Tokenize("((~(p3(v3))) and (~(p4(v4)))) or (~p1(v1))"));
+  REQUIRE(Disj(Brackets(Conj(Impl(), Impl())), Impl())
+              .match(std::move(fol_formula)));
 }
 
 TEST_CASE("test compound matchers with ref factory functions",
@@ -195,5 +200,17 @@ TEST_CASE(
   REQUIRE(check::Conj(check::Pred(), check::Pred(), check::Pred(),
                       check::Pred())(fol));
   REQUIRE(!check::Conj(check::Pred(), check::Pred(), check::Pred())(fol));
+}
+
+TEST_CASE("test brackets matching", "[checker][matcher][fol]") {
+  auto fol = Parse(lexer::Tokenize("~(pP1(vx))"));
+  REQUIRE(!check::Brackets()(fol));
+
+  fol = Parse(lexer::Tokenize("pP1(vx)"));
+  REQUIRE(!check::Brackets()(fol));
+
+  fol = Parse(lexer::Tokenize("(pP1(vx))"));
+  REQUIRE(check::Brackets()(fol));
+  REQUIRE(!check::Conj(check::Anything(), check::Anything())(fol));
 }
 

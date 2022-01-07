@@ -186,6 +186,10 @@ inline BracketFormula operator!(ImplicationFormula impl) {
   return parser::MakeBrackets(std::move(impl));
 }
 
+inline BracketFormula operator!(DisjunctionFormula impl) {
+  return parser::MakeBrackets({std::move(impl)});
+}
+
 inline NotFormula operator~(UnaryFormula impl) {
   return parser::MakeNot(std::move(impl));
 }
