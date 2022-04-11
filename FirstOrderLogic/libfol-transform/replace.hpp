@@ -20,6 +20,22 @@ inline std::size_t ReplaceAll(std::string& inout, std::string_view what,
   return count;
 }
 
+template <class T>
+inline T RenameVar(T src, std::string with) {
+  auto str = parser::ToString(src.data.second);
+  ReplaceAll(str, src.data.first, with);
+  src.data.second = parser::Parse(lexer::Tokenize(str));
+  src.data.first = with;
+  return src;
+}
+
+template <class T>
+inline T RenameVar(T src) {
+  static int cnt = 0;
+  auto with = "vu" + std::to_string(cnt++);
+  return RenameVar(std::move(src), with);
+}
+
 inline parser::FolFormula RenameVar(parser::FolFormula src,
                                     lexer::Variable what,
                                     lexer::Variable with) {

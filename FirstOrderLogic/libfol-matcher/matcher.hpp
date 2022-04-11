@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <libfol-matcher/check_matcher.hpp>
 #include <libfol-parser/parser/types.hpp>
 #include <optional>
 #include <variant>
@@ -165,7 +166,7 @@ struct UnaryMatcher {
 
     formula = std::move(conj.data->first);
 
-    if (std::holds_alternative<parser::BracketFormula>(formula->data)) {
+    if (check::Brackets(check::Unary())(formula.value())) {
       return match(
           std::get<parser::BracketFormula>(std::move(formula->data)).data);
     }

@@ -71,14 +71,14 @@ inline std::ostream &operator<<(std::ostream &os,
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const ForallFormula &forall_formula) {
-  return os << "@ " << forall_formula.data.first << " . "
-            << forall_formula.data.second;
+  return os << "(@ " << forall_formula.data.first << " . "
+            << forall_formula.data.second << ")";
 }
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const ExistsFormula &exists_formula) {
-  return os << "? " << exists_formula.data.first << " . "
-            << exists_formula.data.second;
+  return os << "(? " << exists_formula.data.first << " . "
+            << exists_formula.data.second << ")";
 }
 
 inline std::ostream &operator<<(std::ostream &os,

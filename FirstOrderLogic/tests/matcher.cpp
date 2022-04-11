@@ -15,7 +15,7 @@ TEST_CASE("test implication compound matcher", "[matcher][fol]") {
   auto fol_formula = Parse(lexer::Tokenize("(@ vx . pP1(vx)) -> pP2(vy)"));
   ImplicationCompoundMatcher<ForallMatcher, ImplicationMatcher> matcher;
   REQUIRE(matcher.match(std::move(fol_formula)));
-  REQUIRE(ToString(matcher.first.formula.value()) == "@ vx . pP1(vx)");
+  REQUIRE(ToString(matcher.first.formula.value()) == "(@ vx . pP1(vx))");
   REQUIRE(ToString(matcher.second.formula.value()) == "pP2(vy)");
 }
 
@@ -23,7 +23,7 @@ TEST_CASE("test disjunction compound matcher", "[matcher][fol]") {
   auto fol_formula = Parse(lexer::Tokenize("(@ vx . pP1(vx)) or pP2(vy)"));
   DisjunctionCompoundMatcher<ForallMatcher, ImplicationMatcher> matcher;
   REQUIRE(matcher.match(std::move(fol_formula)));
-  REQUIRE(ToString(matcher.first.formula.value()) == "@ vx . pP1(vx)");
+  REQUIRE(ToString(matcher.first.formula.value()) == "(@ vx . pP1(vx))");
   REQUIRE(ToString(matcher.second.formula.value()) == "pP2(vy)");
 }
 
@@ -56,7 +56,6 @@ TEST_CASE("test compound matchers with factory functions", "[matcher][fol]") {
 
   fol_formula =
       Parse(lexer::Tokenize("((~(p3(v3))) and (~(p4(v4)))) or (~p1(v1))"));
-  std::cout << fol_formula << std::endl;
   REQUIRE(Disj(Brackets(Conj(Impl(), Impl())), Impl())
               .match(std::move(fol_formula)));
 }
@@ -85,13 +84,15 @@ TEST_CASE("test check simple matchers", "[checker][matcher][fol]") {
   REQUIRE(check::Exists().check(Parse(lexer::Tokenize("? vx . pP1(vx)"))));
   REQUIRE(check::Pred().check(Parse(lexer::Tokenize("pP1(vx)"))));
   REQUIRE(check::Impl().check(Parse(lexer::Tokenize("pP2(vx) -> pP1(vx)"))));
+  REQUIRE(check::Disj(check::Forall(), check::Forall())(
+      Parse(lexer::Tokenize("(@ vx . pF(vx)) or (@ vx . pH(vx))"))));
 }
 
 TEST_CASE("test check compound matchers", "[checker][matcher][fol]") {
   auto fol_formula =
       Parse(lexer::Tokenize("@ vx . pP1(vx)->pP2(vx)->pP3(vx)->pP4(vx)"));
-  auto checker = check::Forall(
-      check::Impl(check::Pred(), check::Impl(check::Pred(), check::Impl())));
+  auto checker = check::Forall(check::Impl(
+      check::Disj(), check::Impl(check::Disj(), check::Anything())));
   REQUIRE(checker.check(fol_formula));
   fol_formula =
       Parse(lexer::Tokenize("? vx . pP1(vx)->pP2(vx)->pP3(vx)->pP4(vx)"));
@@ -213,5 +214,14 @@ TEST_CASE("test brackets matching", "[checker][matcher][fol]") {
   fol = Parse(lexer::Tokenize("(pP1(vx))"));
   REQUIRE(check::Brackets()(fol));
   REQUIRE(!check::Conj(check::Anything(), check::Anything())(fol));
+
+  fol = Parse(lexer::Tokenize("((pP1(vx)))"));
+  REQUIRE(check::Brackets()(fol));
+  REQUIRE(!check::Conj(check::Anything(), check::Anything())(fol));
+
+  fol = Parse(
+      lexer::Tokenize("((p1(v1)) or (p3(v3))) and ((p1(v1)) or (p4(v4)))"));
+  REQUIRE(check::Conj(check::Unary(), check::Unary())(fol));
+  REQUIRE(Conj(Unary(), Unary()).match(std::move(fol)));
 }
 

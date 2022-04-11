@@ -3,6 +3,7 @@
 #include <libfol-parser/lexer/lexer.hpp>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <variant>
 
@@ -140,7 +141,7 @@ inline ExistsFormula MakeExists(std::string var,
   return {{std::move(var), std::move(impl)}};
 }
 
-inline ForallFormula MakeForall(lexer::Variable var,
+inline ForallFormula MakeForall(std::string var,
                                 parser::ImplicationFormula impl) {
   return {{std::move(var), std::move(impl)}};
 }
@@ -171,7 +172,6 @@ inline DisjunctionFormula MakeDisj(ConjunctionFormula conj,
               std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
               std::move(disj.data))}};
 }
-
 inline ImplicationFormula MakeImpl(DisjunctionFormula disj) {
   return {std::move(disj)};
 }
@@ -215,6 +215,18 @@ inline ImplicationFormula operator>>=(UnaryFormula disj,
           std::move(disj), std::move(impl))};
 }
 
+inline DisjunctionFormula operator||(ConjunctionFormula conj_lhs,
+                                     DisjunctionFormula disj_rhs) {
+  return MakeDisj(std::move(conj_lhs), std::move(disj_rhs));
+}
+
+inline DisjunctionFormula operator||(DisjunctionFormula disj_lhs,
+                                     UnaryFormula unary_rhs) {
+  return MakeDisj(
+      std::move(disj_lhs.data.first),
+      {MakeConj(std::move(unary_rhs)), std::move(disj_lhs.data.second)});
+}
+
 inline DisjunctionFormula operator||(UnaryFormula conj_lhs,
                                      UnaryFormula conj_rhs) {
   return DisjunctionFormula{
@@ -251,6 +263,21 @@ inline DisjunctionFormula operator||(ConjunctionFormula conj_lhs,
       DisjunctionPrimeFormula{std::make_unique<
           std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
           std::move(conj_rhs), DisjunctionPrimeFormula{lexer::EPS{}})}};
+}
+
+inline DisjunctionFormula operator||(DisjunctionFormula lhs,
+                                     DisjunctionFormula rhs) {
+  DisjunctionPrimeFormula* most_right_lhs = &lhs.data.second;
+  while (most_right_lhs->data.index() == 0) {
+    most_right_lhs = &std::get<std::unique_ptr<
+        std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>>(
+                          most_right_lhs->data)
+                          ->second;
+  }
+  most_right_lhs->data =
+      std::make_unique<std::pair<ConjunctionFormula, DisjunctionPrimeFormula>>(
+          std::move(rhs.data));
+  return lhs;
 }
 
 inline ConjunctionFormula operator&&(UnaryFormula fol_lhs,
@@ -260,6 +287,30 @@ inline ConjunctionFormula operator&&(UnaryFormula fol_lhs,
       ConjunctionPrimeFormula{
           std::make_unique<std::pair<UnaryFormula, ConjunctionPrimeFormula>>(
               std::move(fol_rhs), ConjunctionPrimeFormula{lexer::EPS{}})})};
+}
+
+inline ConjunctionFormula operator&&(ConjunctionFormula lhs,
+                                     ConjunctionFormula rhs) {
+  ConjunctionPrimeFormula* most_right_lhs = &lhs.data->second;
+  while (most_right_lhs->data.index() == 0) {
+    most_right_lhs =
+        &std::get<
+             std::unique_ptr<std::pair<UnaryFormula, ConjunctionPrimeFormula>>>(
+             most_right_lhs->data)
+             ->second;
+  }
+  most_right_lhs->data = std::move(rhs.data);
+  return lhs;
+}
+
+inline ConjunctionFormula operator&&(UnaryFormula unary_lhs,
+                                     ConjunctionFormula conj_rhs) {
+  return MakeConj(std::move(unary_lhs), std::move(conj_rhs));
+}
+
+inline ConjunctionFormula operator&&(ConjunctionFormula conj_lhs,
+                                     UnaryFormula unary_rhs) {
+  return std::move(unary_rhs) && std::move(conj_lhs);
 }
 
 inline FunctionFormula operator*(lexer::Function function, TermList term_list) {
@@ -277,11 +328,11 @@ inline UnaryFormula operator*(lexer::Predicate pred, TermList term_list) {
   return {PredicateFormula{{std::move(pred), std::move(term_list)}}};
 }
 
-inline UnaryFormula ForAll(lexer::Variable var, ImplicationFormula impl) {
+inline UnaryFormula ForAll(std::string var, ImplicationFormula impl) {
   return {ForallFormula{{std::move(var), std::move(impl)}}};
 }
 
-inline UnaryFormula Exists(lexer::Variable var, ImplicationFormula impl) {
+inline UnaryFormula Exists(std::string var, ImplicationFormula impl) {
   return {ExistsFormula{{std::move(var), std::move(impl)}}};
 }
 

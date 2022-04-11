@@ -12,8 +12,8 @@ Parser follows following grammar rules
                 | EPS
 <unary>       ::= ( <impl> )
                 | ~ unary
-                | @ <var> . <impl>
-                | ? <var> . <impl>
+                | @ <var> . ( <impl> )
+                | ? <var> . ( <impl> )
                 | <pred> (<term_list>)
 <term>        ::= <constant>
                 | <var>
@@ -26,6 +26,7 @@ Parser follows following grammar rules
 <char>        ::= ('A'...'Z'|'a'...'z'|'0'...'9'|''')
 <constant>    ::= c<name>
 <var>         ::= v<name>
+<renamed_var> ::= vu<name>
 <fn_symbol>   ::= f<name>
 <pred>        ::= p<name>
 ```

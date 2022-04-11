@@ -23,17 +23,27 @@ struct CheckerCrtp {
     return check(a);
   }
 
-  bool check(const auto &a) const { return static_cast<T>(*this).check(a); }
+  bool check(const auto &a) const {
+    return static_cast<const T &>(*this).check(a);
+  }
 };
 
 template <typename Lhs, typename Rhs>
 struct Or : CheckerCrtp<Or<Lhs, Rhs>> {
-  bool check(const auto &a) const { return Lhs{}(a) || Rhs{}(a); }
+  Or() = default;
+  Or(auto lhs, auto rhs) : lhs(lhs), rhs(rhs) {}
+
+  bool check(const auto &a) const { return lhs(a) || rhs(a); }
+
+  Lhs lhs{};
+  Rhs rhs{};
 };
 
 template <typename Type, typename Checker>
 struct SimpleCompoundCheckerImpl
     : CheckerCrtp<SimpleCompoundCheckerImpl<Type, Checker>> {
+  SimpleCompoundCheckerImpl() = default;
+  SimpleCompoundCheckerImpl(auto checker) : checker(checker) {}
   template <class T>
   bool checkEps(const T &) const {
     return false;
@@ -59,9 +69,9 @@ struct SimpleCompoundCheckerImpl
 
   bool check(const Type &t) const {
     if constexpr (details::utils::HasMemberData<Type>) {
-      return Checker{}(t.data);
+      return checker(t.data);
     } else {
-      return Checker{}(t);
+      return checker(t);
     }
   }
 
@@ -86,6 +96,8 @@ struct SimpleCompoundCheckerImpl
       return check(t.data);
     }
   }
+
+  Checker checker;
 };
 
 template <typename T = AlwaysTrueChecker>
@@ -95,7 +107,11 @@ using CheckBracketsCompound =
 using CheckBrackets = CheckBracketsCompound<>;
 
 template <typename T>
-using SkipBrackets = Or<CheckBracketsCompound<T>, T>;
+struct SkipBrackets : Or<CheckBracketsCompound<T>, T> {
+  SkipBrackets() = default;
+  SkipBrackets(auto checker)
+      : Or<CheckBracketsCompound<T>, T>(checker, checker) {}
+};
 
 template <typename T, typename Checker>
 using SimpleCompoundChecker =
@@ -104,22 +120,32 @@ using SimpleCompoundChecker =
 template <typename LhsChecker, typename RhsChecker>
 struct BasicPairChecker
     : CheckerCrtp<BasicPairChecker<LhsChecker, RhsChecker>> {
+  BasicPairChecker() = default;
+  BasicPairChecker(auto lhs, auto rhs) : lhs(lhs), rhs(rhs) {}
   bool check(const details::utils::PtrPairType auto &t) const {
     return check(*t);
   }
   bool check(const details::utils::PairType auto &t) const {
-    return LhsChecker{}(t.first) && RhsChecker{}(t.second);
+    return lhs(t.first) && rhs(t.second);
   }
+
+  LhsChecker lhs;
+  RhsChecker rhs;
 };
 
 template <typename PairType, typename LhsChecker, typename RhsChecker>
 struct PairCompoundChecker
     : CheckerCrtp<PairCompoundChecker<PairType, LhsChecker, RhsChecker>> {
+  PairCompoundChecker() = default;
+  PairCompoundChecker(auto lhs, auto rhs) : checker({lhs, rhs}) {}
+
   template <typename T>
   bool check(const T &t) const {
-    return SimpleCompoundChecker<PairType,
-                                 BasicPairChecker<LhsChecker, RhsChecker>>{}(t);
+    return checker(t);
   }
+
+  SimpleCompoundChecker<PairType, BasicPairChecker<LhsChecker, RhsChecker>>
+      checker;
 };
 
 template <typename T>
