@@ -11,7 +11,14 @@
 #include "details/utils/utility.hpp"
 
 namespace fol::transform {
-inline parser::FolFormula Normalize(parser::FolFormula formula) {}
+inline parser::FolFormula Normalize(parser::FolFormula formula);
+
+inline bool IsNoQuantifiers(const parser::FolFormula &formula) {
+  auto str = ToString(formula);
+
+  return (str.find("@") == std::string::npos) &&
+         (str.find("?") == std::string::npos);
+}
 
 inline bool IsAllDisj(const parser::DisjunctionFormula &formula) {
   auto str = ToString(formula);
@@ -276,15 +283,16 @@ inline parser::ImplicationFormula QuantifiersToCNF4(
 // (Q1 vx . F[vx]) and (Q2 vx . H[vx]) = Q1 vx . Q2 uc . F[vx] and H[uc]
 inline parser::ImplicationFormula QuantifiersToCNF6(
     parser::ImplicationFormula formula) {
-  // (? vx . F[vx]) and (? vx . H[vx]) = ? vx . ? uc . F[vx] and H[uc]
-  if (matcher::check::Disj(matcher::check::Exists(),
+  // (? vx . F[vx]) and (? vx . H[vx]) = ? ucc . ? uc . F[ucc] and H[uc]
+  if (matcher::check::Conj(matcher::check::Exists(),
                            matcher::check::Exists())(formula)) {
     std::optional<parser::ExistsFormula> forall_f;
     std::optional<parser::ExistsFormula> forall_h;
 
-    matcher::Disj(matcher::RefExists(forall_f), matcher::RefExists(forall_h))
+    matcher::Conj(matcher::RefExists(forall_f), matcher::RefExists(forall_h))
         .match(std::move(formula));
 
+    forall_f = RenameVar(std::move(forall_f.value()));
     forall_h = RenameVar(std::move(forall_h.value()));
 
     parser::ImplicationFormula inner_forall = {
@@ -297,15 +305,16 @@ inline parser::ImplicationFormula QuantifiersToCNF6(
         forall_f.value().data.first, std::move(inner_forall))))};
   }
 
-  // (? vx . F[vx]) and (@ vx . H[vx]) = ? vx . @ uc . F[vx] and H[uc]
-  if (matcher::check::Disj(matcher::check::Exists(),
+  // (? vx . F[vx]) and (@ vx . H[vx]) = ? ucc . @ uc . F[ucc] and H[uc]
+  if (matcher::check::Conj(matcher::check::Exists(),
                            matcher::check::Forall())(formula)) {
     std::optional<parser::ExistsFormula> forall_f;
     std::optional<parser::ForallFormula> forall_h;
 
-    matcher::Disj(matcher::RefExists(forall_f), matcher::RefForall(forall_h))
+    matcher::Conj(matcher::RefExists(forall_f), matcher::RefForall(forall_h))
         .match(std::move(formula));
 
+    forall_f = RenameVar(std::move(forall_f.value()));
     forall_h = RenameVar(std::move(forall_h.value()));
 
     parser::ImplicationFormula inner_forall = {
@@ -314,17 +323,17 @@ inline parser::ImplicationFormula QuantifiersToCNF6(
                                {!std::move(forall_f.value().data.second) &&
                                 !std::move(forall_h.value().data.second)})))};
 
-    return {parser::MakeDisj(parser::MakeConj(parser::MakeExists(
-        forall_f.value().data.first, std::move(inner_forall))))};
+    return parser::ToFol(parser::MakeExists(forall_f.value().data.first,
+                                            std::move(inner_forall)));
   }
 
   // (@ vx . F[vx]) and (? vx . H[vx]) = @ vx . ? uc . F[vx] and H[uc]
-  if (matcher::check::Disj(matcher::check::Forall(),
+  if (matcher::check::Conj(matcher::check::Forall(),
                            matcher::check::Exists())(formula)) {
     std::optional<parser::ForallFormula> forall_f;
     std::optional<parser::ExistsFormula> forall_h;
 
-    matcher::Disj(matcher::RefForall(forall_f), matcher::RefExists(forall_h))
+    matcher::Conj(matcher::RefForall(forall_f), matcher::RefExists(forall_h))
         .match(std::move(formula));
 
     forall_h = RenameVar(std::move(forall_h.value()));
@@ -340,12 +349,12 @@ inline parser::ImplicationFormula QuantifiersToCNF6(
   }
 
   // (@ vx . F[vx]) and (@ vx . H[vx]) = @ vx . @ uc . F[vx] and H[uc]
-  if (matcher::check::Disj(matcher::check::Forall(),
+  if (matcher::check::Conj(matcher::check::Forall(),
                            matcher::check::Forall())(formula)) {
     std::optional<parser::ForallFormula> forall_f;
     std::optional<parser::ForallFormula> forall_h;
 
-    matcher::Disj(matcher::RefForall(forall_f), matcher::RefForall(forall_h))
+    matcher::Conj(matcher::RefForall(forall_f), matcher::RefForall(forall_h))
         .match(std::move(formula));
 
     forall_h = RenameVar(std::move(forall_h.value()));
@@ -453,7 +462,7 @@ inline parser::ImplicationFormula QuantifiersToCNF5(
   return formula;
 }
 
-inline parser::ImplicationFormula QuantifiersToCNF(
+inline parser::ImplicationFormula NormalizeQuantifiersStep(
     parser::ImplicationFormula formula) {
   formula = QuantifiersToCNF3(std::move(formula));
   formula = QuantifiersToCNF4(std::move(formula));
@@ -463,6 +472,241 @@ inline parser::ImplicationFormula QuantifiersToCNF(
 
   formula = QuantifiersToCNF1(std::move(formula));
   formula = QuantifiersToCNF2(std::move(formula));
+
+  return formula;
+}
+
+inline parser::ImplicationFormula NormalizeQuantifiers(
+    parser::ImplicationFormula formula) {
+  formula = DeleteUselessBrackets(std::move(formula));
+
+  if (IsNoQuantifiers(formula)) {
+    return formula;
+  }
+
+  formula = NormalizeQuantifiersStep(std::move(formula));
+
+  if (matcher::check::Forall()(formula)) {
+    std::optional<parser::ForallFormula> forall_f;
+    matcher::RefForall(forall_f).match(std::move(formula));
+    return parser::ToFol(parser::MakeForall(
+        forall_f.value().data.first,
+        NormalizeQuantifiers(std::move(forall_f.value().data.second))));
+  }
+
+  if (matcher::check::Exists()(formula)) {
+    std::optional<parser::ExistsFormula> forall_f;
+    matcher::RefExists(forall_f).match(std::move(formula));
+    return parser::ToFol(parser::MakeExists(
+        forall_f.value().data.first,
+        NormalizeQuantifiers(std::move(forall_f.value().data.second))));
+  }
+
+  if (matcher::check::Disj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::FolFormula> fol_lhs;
+    std::optional<parser::FolFormula> fol_rhs;
+    matcher::Disj(matcher::RefImpl(fol_lhs), matcher::RefImpl(fol_rhs))
+        .match(std::move(formula));
+
+    return NormalizeQuantifiers(
+        parser::ToFol(!NormalizeQuantifiers(std::move(fol_lhs.value())) ||
+                      !NormalizeQuantifiers(std::move(fol_rhs.value()))));
+  }
+
+  if (matcher::check::Conj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::FolFormula> fol_lhs;
+    std::optional<parser::FolFormula> fol_rhs;
+    matcher::Conj(matcher::RefImpl(fol_lhs), matcher::RefImpl(fol_rhs))
+        .match(std::move(formula));
+
+    return NormalizeQuantifiers(
+        parser::ToFol(!NormalizeQuantifiers(std::move(fol_lhs.value())) &&
+                      !NormalizeQuantifiers(std::move(fol_rhs.value()))));
+  }
+
+  return formula;
+}
+
+inline parser::ImplicationFormula RemoveImplication(
+    parser::ImplicationFormula formula) {
+  formula = DropAllOutBrackets(std::move(formula));
+  formula = DropAllBracketsInNot(std::move(formula));
+  // F -> G = (~ F) or (G)
+  if (matcher::check::Impl(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::ImplicationFormula> impl_f;
+    std::optional<parser::ImplicationFormula> impl;
+
+    matcher::Impl(matcher::RefImpl(impl_f), matcher::RefImpl(impl))
+        .match(std::move(formula));
+
+    parser::ImplicationFormula disj_t = RemoveImplication(
+        {~!std::move(impl_f.value()) || !std::move(impl.value())});
+
+    return disj_t;
+  }
+
+  if (matcher::check::Forall()(formula)) {
+    std::optional<parser::ForallFormula> forall_f;
+    matcher::RefForall(forall_f).match(std::move(formula));
+    return parser::ToFol(parser::MakeForall(
+        forall_f.value().data.first,
+        RemoveImplication(std::move(forall_f.value().data.second))));
+  }
+
+  if (matcher::check::Exists()(formula)) {
+    std::optional<parser::ExistsFormula> forall_f;
+    matcher::RefExists(forall_f).match(std::move(formula));
+    return parser::ToFol(parser::MakeExists(
+        forall_f.value().data.first,
+        RemoveImplication(std::move(forall_f.value().data.second))));
+  }
+
+  if (matcher::check::Disj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::FolFormula> fol_lhs;
+    std::optional<parser::FolFormula> fol_rhs;
+    matcher::Disj(matcher::RefImpl(fol_lhs), matcher::RefImpl(fol_rhs))
+        .match(std::move(formula));
+
+    return parser::ToFol(!RemoveImplication(std::move(fol_lhs.value())) ||
+                         !RemoveImplication(std::move(fol_rhs.value())));
+  }
+
+  if (matcher::check::Conj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::FolFormula> fol_lhs;
+    std::optional<parser::FolFormula> fol_rhs;
+    matcher::Conj(matcher::RefImpl(fol_lhs), matcher::RefImpl(fol_rhs))
+        .match(std::move(formula));
+
+    return parser::ToFol(!RemoveImplication(std::move(fol_lhs.value())) &&
+                         !RemoveImplication(std::move(fol_rhs.value())));
+  }
+
+  if (matcher::check::Not()(formula)) {
+    std::optional<parser::FolFormula> fol;
+    matcher::Not(matcher::RefImpl(fol)).match(std::move(formula));
+    return parser::ToFol(~!RemoveImplication(std::move(fol.value())));
+  }
+
+  return formula;
+}
+
+inline parser::ImplicationFormula MoveNegInner(
+    parser::ImplicationFormula formula) {
+  // ~(~F) = F
+  if (matcher::check::Not(matcher::check::Not())(formula)) {
+    std::optional<parser::ImplicationFormula> unary;
+    matcher::Not(matcher::Not(matcher::RefImpl(unary)))
+        .match(std::move(formula));
+
+    return MoveNegInner(std::move(unary.value()));
+  }
+
+  // ~(F or G) = ~F and ~G
+  if (matcher::check::Not(matcher::check::Disj(
+          matcher::check::Anything(), matcher::check::Anything()))(formula)) {
+    std::optional<parser::ImplicationFormula> impl_lhs;
+    std::optional<parser::ImplicationFormula> impl_rhs;
+
+    matcher::Not(matcher::Brackets(matcher::Disj(matcher::RefImpl(impl_lhs),
+                                                 matcher::RefImpl(impl_rhs))))
+        .match(std::move(formula));
+
+    auto conj =
+        MoveNegInner({!(matcher::UnaryToFol(~!std::move(impl_lhs.value()))) &&
+                      !(matcher::UnaryToFol(~!std::move(impl_rhs.value())))});
+
+    return conj;
+  }
+
+  // ~(F and G) = ~F or ~G
+  if (matcher::check::Not(matcher::check::Conj(
+          matcher::check::Anything(), matcher::check::Anything()))(formula)) {
+    std::optional<parser::ImplicationFormula> impl_lhs;
+    std::optional<parser::ImplicationFormula> impl_rhs;
+
+    matcher::Not(matcher::Brackets(matcher::Conj(matcher::RefImpl(impl_lhs),
+                                                 matcher::RefImpl(impl_rhs))))
+        .match(std::move(formula));
+
+    auto disj =
+        MoveNegInner({!(matcher::UnaryToFol(~!std::move(impl_lhs.value()))) ||
+                      !(matcher::UnaryToFol(~!std::move(impl_rhs.value())))});
+
+    return disj;
+  }
+
+  // ~(@ vx . F) = ? vx . ~F
+  if (matcher::check::Not(matcher::check::Forall())(formula)) {
+    std::optional<std::string> var;
+    std::optional<parser::ImplicationFormula> impl;
+    matcher::Not(matcher::Forall(matcher::RefName(var), matcher::RefImpl(impl)))
+        .match(std::move(formula));
+
+    lexer::Variable var_v;
+    var_v.base() = var.value();
+
+    return parser::Exists(
+        std::move(var_v),
+        MoveNegInner(matcher::UnaryToFol(~!std::move(impl.value()))));
+  }
+
+  // ~(? vx . F) = @ vx . ~F
+  if (matcher::check::Not(matcher::check::Exists())(formula)) {
+    std::optional<std::string> var;
+    std::optional<parser::ImplicationFormula> impl;
+    matcher::Not(matcher::Exists(matcher::RefName(var), matcher::RefImpl(impl)))
+        .match(std::move(formula));
+
+    lexer::Variable var_v;
+    var_v.base() = var.value();
+
+    return parser::ForAll(
+        std::move(var_v),
+        MoveNegInner(matcher::UnaryToFol(~!std::move(impl.value()))));
+  }
+
+  if (matcher::check::Forall()(formula)) {
+    std::optional<parser::ForallFormula> forall_f;
+    matcher::RefForall(forall_f).match(std::move(formula));
+    return parser::ToFol(parser::MakeForall(
+        forall_f.value().data.first,
+        MoveNegInner(std::move(forall_f.value().data.second))));
+  }
+
+  if (matcher::check::Exists()(formula)) {
+    std::optional<parser::ExistsFormula> forall_f;
+    matcher::RefExists(forall_f).match(std::move(formula));
+    return parser::ToFol(parser::MakeExists(
+        forall_f.value().data.first,
+        MoveNegInner(std::move(forall_f.value().data.second))));
+  }
+
+  if (matcher::check::Disj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::FolFormula> fol_lhs;
+    std::optional<parser::FolFormula> fol_rhs;
+    matcher::Disj(matcher::RefImpl(fol_lhs), matcher::RefImpl(fol_rhs))
+        .match(std::move(formula));
+
+    return parser::ToFol(!MoveNegInner(std::move(fol_lhs.value())) ||
+                         !MoveNegInner(std::move(fol_rhs.value())));
+  }
+
+  if (matcher::check::Conj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::FolFormula> fol_lhs;
+    std::optional<parser::FolFormula> fol_rhs;
+    matcher::Conj(matcher::RefImpl(fol_lhs), matcher::RefImpl(fol_rhs))
+        .match(std::move(formula));
+
+    return parser::ToFol(!MoveNegInner(std::move(fol_lhs.value())) &&
+                         !MoveNegInner(std::move(fol_rhs.value())));
+  }
 
   return formula;
 }
@@ -478,96 +722,6 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
       matcher::check::Disj(pred_checker, pred_checker)(formula) ||
       matcher::check::Conj(pred_checker, pred_checker)(formula)) {
     return formula;
-  }
-
-  formula = QuantifiersToCNF(std::move(formula));
-
-  // F -> G = (~ F) or (G)
-  if (matcher::check::Impl(matcher::check::Anything(),
-                           matcher::check::Anything())(formula)) {
-    std::optional<parser::ImplicationFormula> impl_f;
-    std::optional<parser::ImplicationFormula> impl;
-
-    matcher::Impl(matcher::RefImpl(impl_f), matcher::RefImpl(impl))
-        .match(std::move(formula));
-
-    parser::ImplicationFormula disj_t = ToConjunctionNormalForm(
-        {~!std::move(impl_f.value()) || !std::move(impl.value())});
-
-    return disj_t;
-  }
-
-  // ~(~F) = F
-  if (matcher::check::Not(matcher::check::Not())(formula)) {
-    std::optional<parser::ImplicationFormula> unary;
-    matcher::Not(matcher::Not(matcher::RefImpl(unary)))
-        .match(std::move(formula));
-
-    return ToConjunctionNormalForm(std::move(unary.value()));
-  }
-
-  // ~(F or G) = ~F and ~G
-  if (matcher::check::Not(matcher::check::Disj(
-          matcher::check::Anything(), matcher::check::Anything()))(formula)) {
-    std::optional<parser::ImplicationFormula> impl_lhs;
-    std::optional<parser::ImplicationFormula> impl_rhs;
-
-    matcher::Not(matcher::Brackets(matcher::Disj(matcher::RefImpl(impl_lhs),
-                                                 matcher::RefImpl(impl_rhs))))
-        .match(std::move(formula));
-
-    auto conj = ToConjunctionNormalForm(
-        {!(matcher::UnaryToFol(~!std::move(impl_lhs.value()))) &&
-         !(matcher::UnaryToFol(~!std::move(impl_rhs.value())))});
-
-    return conj;
-  }
-
-  // ~(F and G) = ~F or ~G
-  if (matcher::check::Not(matcher::check::Conj(
-          matcher::check::Anything(), matcher::check::Anything()))(formula)) {
-    std::optional<parser::ImplicationFormula> impl_lhs;
-    std::optional<parser::ImplicationFormula> impl_rhs;
-
-    matcher::Not(matcher::Brackets(matcher::Conj(matcher::RefImpl(impl_lhs),
-                                                 matcher::RefImpl(impl_rhs))))
-        .match(std::move(formula));
-
-    auto disj = ToConjunctionNormalForm(
-        {!(matcher::UnaryToFol(~!std::move(impl_lhs.value()))) ||
-         !(matcher::UnaryToFol(~!std::move(impl_rhs.value())))});
-
-    return disj;
-  }
-
-  // ~(@ vx . F) = ? vx . ~F
-  if (matcher::check::Not(matcher::check::Forall())(formula)) {
-    std::optional<std::string> var;
-    std::optional<parser::ImplicationFormula> impl;
-    matcher::Not(matcher::Forall(matcher::RefName(var), matcher::RefImpl(impl)))
-        .match(std::move(formula));
-
-    lexer::Variable var_v;
-    var_v.base() = var.value();
-
-    return parser::Exists(std::move(var_v),
-                          ToConjunctionNormalForm(
-                              matcher::UnaryToFol(~!std::move(impl.value()))));
-  }
-
-  // ~(? vx . F) = @ vx . ~F
-  if (matcher::check::Not(matcher::check::Exists())(formula)) {
-    std::optional<std::string> var;
-    std::optional<parser::ImplicationFormula> impl;
-    matcher::Not(matcher::Exists(matcher::RefName(var), matcher::RefImpl(impl)))
-        .match(std::move(formula));
-
-    lexer::Variable var_v;
-    var_v.base() = var.value();
-
-    return parser::ForAll(std::move(var_v),
-                          ToConjunctionNormalForm(
-                              matcher::UnaryToFol(~!std::move(impl.value()))));
   }
 
   // F or (G and H) = ((F) or (G)) and ((F) or (H))
@@ -619,8 +773,8 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     std::optional<parser::ImplicationFormula> impl;
     matcher::Not(matcher::RefImpl(impl)).match(std::move(formula));
 
-    return ToConjunctionNormalForm(matcher::UnaryToFol(
-        ~!ToConjunctionNormalForm(std::move(impl.value()))));
+    return matcher::UnaryToFol(
+        ~!ToConjunctionNormalForm(std::move(impl.value())));
   }
 
   if (matcher::check::Forall()(formula)) {
@@ -879,4 +1033,18 @@ inline parser::FolFormula ToCNF(parser::FolFormula formula) {
   return DeleteUselessBrackets(ToConjunctionNormalForm(std::move(formula)));
 }
 
+inline parser::FolFormula Normalize(parser::FolFormula formula) {
+  std::cout << "Remove implication: "
+            << (formula = RemoveImplication(std::move(formula))) << std::endl;
+  std::cout << "Move negative: " << (formula = MoveNegInner(std::move(formula)))
+            << std::endl;
+  std::cout << "Normalize quantifiers: "
+            << (formula = NormalizeQuantifiers(std::move(formula)))
+            << std::endl;
+  std::cout << "To conjunction normal form: "
+            << (formula = ToCNF(std::move(formula))) << std::endl;
+  return formula;
+}
+
 }  // namespace fol::transform
+

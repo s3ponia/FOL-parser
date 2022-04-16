@@ -16,6 +16,8 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 include_directories(FirstOrderLogic)
 
+add_executable(fol_prover "FirstOrderLogic/main.cpp")
+
 # Unit testing
 file(GLOB TEST_SOURCES "FirstOrderLogic/tests/*.cpp")
 add_executable(tests ${TEST_SOURCES}  ${SOURCES})

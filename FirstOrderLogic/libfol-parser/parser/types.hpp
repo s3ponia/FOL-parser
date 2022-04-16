@@ -340,5 +340,19 @@ inline UnaryFormula B$(ImplicationFormula impl) {
   return {BracketFormula{std::move(impl)}};
 }
 
+inline FolFormula ToFol(ImplicationFormula formula) { return formula; }
+
+inline FolFormula ToFol(DisjunctionFormula formula) {
+  return {std::move(formula)};
+}
+
+inline FolFormula ToFol(ConjunctionFormula formula) {
+  return ToFol(MakeDisj(std::move(formula)));
+}
+
+inline FolFormula ToFol(UnaryFormula formula) {
+  return ToFol(MakeConj(std::move(formula)));
+}
+
 }  // namespace fol::parser
 

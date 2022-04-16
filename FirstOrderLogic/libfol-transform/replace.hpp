@@ -29,16 +29,16 @@ inline T RenameVar(T src, std::string with) {
   return src;
 }
 
+inline int cnt = 0;
 template <class T>
 inline T RenameVar(T src) {
-  static int cnt = 0;
-  auto with = "vu" + std::to_string(cnt++);
+  ++cnt;
+  auto with = "vu" + std::to_string(cnt);
   return RenameVar(std::move(src), with);
 }
 
-inline parser::FolFormula RenameVar(parser::FolFormula src,
-                                    lexer::Variable what,
-                                    lexer::Variable with) {
+inline parser::FolFormula RenameVar(parser::FolFormula src, std::string what,
+                                    std::string with) {
   auto str = parser::ToString(src);
   ReplaceAll(str, what, with);
   return parser::Parse(lexer::Tokenize(str));

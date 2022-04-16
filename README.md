@@ -12,8 +12,8 @@ Parser follows following grammar rules
                 | EPS
 <unary>       ::= ( <impl> )
                 | ~ unary
-                | @ <var> . ( <impl> )
-                | ? <var> . ( <impl> )
+                | @ <var> . <impl>
+                | ? <var> . <impl>
                 | <pred> (<term_list>)
 <term>        ::= <constant>
                 | <var>

@@ -93,7 +93,9 @@ inline std::string_view GetUntilWhiteSpace(std::string_view::size_type &from,
                                            std::string_view str) {
   std::string_view::size_type sv = from;
   while (from < str.size() && !std::isspace(str[from]) && str[from] != '(' &&
-         str[from] != ')') {
+         str[from] != ')' && str[from] != ',' && str[from] != '.' &&
+         str[from] != '?' && str[from] != '@' && str[from] != '~' &&
+         str[from] != '-') {
     ++from;
   }
   return std::string_view{str.begin() + sv, from - sv};
