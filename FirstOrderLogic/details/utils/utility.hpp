@@ -2,10 +2,13 @@
 
 #include <cctype>
 #include <cppcoro/generator.hpp>
+#include <cstring>
+#include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <variant>
+#include <vector>
 
 namespace fol::details::utils {
 template <typename T, typename Label>
@@ -111,6 +114,22 @@ Overloaded(Ts...) -> Overloaded<Ts...>;
 template <class T>
 inline T GetValueFromGenerator(cppcoro::generator<T> &generator) {
   return std::move(*generator.begin());
+}
+
+inline std::vector<std::string> Split(std::string str, std::string delim) {
+  std::vector<std::string> words{};
+
+  size_t pos = 0;
+  while ((pos = str.find(delim)) != std::string::npos) {
+    words.push_back(str.substr(0, pos));
+    str.erase(0, pos + delim.length());
+  }
+
+  if (!str.empty()) {
+    words.push_back(str);
+  }
+
+  return words;
 }
 
 }  // namespace fol::details::utils

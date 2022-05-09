@@ -15,7 +15,8 @@ Parser follows following grammar rules
                 | @ <var> . <impl>
                 | ? <var> . <impl>
                 | <pred> (<term_list>)
-<term>        ::= <var>
+<term>        ::= <constant>
+		| <var>
                 | <fn_symbol> (<term_list>)
 <term_list>   ::= <term> <term_list'>
 <term_list'>  ::= , <term_list>
@@ -23,6 +24,7 @@ Parser follows following grammar rules
 <name>        ::= <char>
                 | <char><name>
 <char>        ::= ('A'...'Z'|'a'...'z'|'0'...'9'|''')
+<constant>    ::= c<name>
 <var>         ::= v<name>
 <renamed_var> ::= vu<name>
 <fn_symbol>   ::= f<name>

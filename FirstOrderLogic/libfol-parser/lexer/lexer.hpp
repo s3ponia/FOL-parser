@@ -98,9 +98,15 @@ inline LexemeGenerator Tokenize(std::string string) {
   i = 0;
   while (i < string.size()) {
     i = details::utils::SkipWhiteSpaces(i, string);
+    if (i >= string.size()) {
+      break;
+    }
     switch (string[i]) {
       case 'v':
         co_yield Variable{details::utils::GetUntilWhiteSpace(i, string)};
+        break;
+      case 'c':
+        co_yield Constant{details::utils::GetUntilWhiteSpace(i, string)};
         break;
       case 'f':
         co_yield Function{details::utils::GetUntilWhiteSpace(i, string)};

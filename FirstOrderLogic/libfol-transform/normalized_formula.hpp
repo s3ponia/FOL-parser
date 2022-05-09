@@ -9,6 +9,9 @@
 #include <numeric>
 #include <vector>
 
+#include "libfol-parser/lexer/lexer.hpp"
+#include "libfol-parser/parser/parser.hpp"
+
 namespace fol::transform {
 class NormalizedFormula;
 NormalizedFormula ToNormalizedFormula(fol::parser::FolFormula);
@@ -40,8 +43,7 @@ class NormalizedFormula {
 
       if (new_quantifiers.empty()) {
         formula_matrix_ =
-            RenameVar(std::move(formula_matrix_), quantifiers_[i].variable,
-                      "c" + quantifiers_[i].variable);
+            Replace(std::move(formula_matrix_), quantifiers_[i].variable);
       } else {
         std::string new_n_fun =
             std::accumulate(new_quantifiers.begin() + 1, new_quantifiers.end(),
@@ -56,6 +58,21 @@ class NormalizedFormula {
     }
 
     quantifiers_ = std::move(new_quantifiers);
+  }
+
+  std::vector<parser::FolFormula> GetDisjunctions() const {
+    std::vector<parser::FolFormula> res;
+
+    auto matrix_s = ToString(formula_matrix_);
+    auto disjunctions_s = details::utils::Split(matrix_s, "and");
+
+    res.reserve(disjunctions_s.size());
+
+    for (auto &s : disjunctions_s) {
+      res.push_back(parser::Parse(lexer::Tokenize(s)));
+    }
+
+    return res;
   }
 
   struct Quantifier {

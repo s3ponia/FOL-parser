@@ -44,5 +44,41 @@ class IUnificator {
     atoms_ = std::move(res_);
     std::sort(atoms_.begin(), atoms_.end());
   }
+
+  std::optional<types::Clause> Resolution(const types::Clause& lhs,
+                                          const types::Clause& rhs) const {
+    for (std::size_t i = 0; i < lhs.atoms().size(); ++i) {
+      for (std::size_t j = 0; j < rhs.atoms().size(); ++j) {
+        if ((lhs.atoms()[i].negative() + rhs.atoms()[j].negative()) % 2 == 1) {
+          auto sub = Unificate(lhs.atoms()[i], rhs.atoms()[j]);
+
+          if (!sub) {
+            continue;
+          }
+
+          auto cpy_lhs = lhs;
+          auto cpy_rhs = rhs;
+
+          cpy_lhs.EraseAtom(i);
+          cpy_rhs.EraseAtom(j);
+
+          cpy_lhs += cpy_rhs;
+
+          sub->Substitute(cpy_lhs);
+
+          Simplify(cpy_lhs);
+
+          std::cout << "Resolution: "
+                    << lhs.atoms()[i].negative() + rhs.atoms()[j].negative()
+                    << " " << lhs.atoms()[i] << " " << rhs.atoms()[j] << " "
+                    << lhs << " RESOLVE " << rhs << " >>> " << cpy_lhs
+                    << std::endl;
+
+          return cpy_lhs;
+        }
+      }
+    }
+    return std::nullopt;
+  }
 };
 }  // namespace fol::unification

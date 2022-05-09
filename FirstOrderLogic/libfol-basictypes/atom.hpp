@@ -8,6 +8,7 @@
 #include <libfol-parser/parser/types.hpp>
 #include <libfol-transform/replace.hpp>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <variant>
 #include <vector>
@@ -16,14 +17,18 @@ namespace fol::types {
 class Atom {
  public:
   friend std::ostream& operator<<(std::ostream& os, const Atom& atom) {
+    if (atom.negative_) {
+      os << "~";
+    }
     os << atom.predicate_name_ << "(";
-    if (!atom.term_list_.empty()) {
-      os << parser::ToString(atom.term_list_[0]);
+    for (std::vector<Term>::size_type i = 0; i < atom.term_list_.size() - 1;
+         ++i) {
+      os << parser::ToString(atom.term_list_[i]) << ", ";
     }
-    for (std::vector<Term>::size_type i = 1; i < atom.term_list_.size(); ++i) {
-      os << ", " << parser::ToString(atom.term_list_[i]);
+    if (atom.term_list_.size() > 0) {
+      os << parser::ToString(atom.term_list_.back());
     }
-    os << ")\n";
+    os << ")";
     return os;
   }
 
@@ -31,10 +36,39 @@ class Atom {
       : predicate_name_(formula.data.first),
         term_list_(FromTermList(std::move(formula.data.second))) {}
 
-  Atom(const Atom& a) : predicate_name_(a.predicate_name_) {
+  Atom(parser::NotFormula formula) {
+    if (matcher::check::Not(matcher::check::Pred())(formula)) {
+      std::optional<parser::PredicateFormula> pred;
+      Not(matcher::RefPred(pred)).match(ToFol(std::move(formula)));
+      predicate_name_ = pred->data.first;
+      term_list_ = FromTermList(std::move(pred->data.second));
+      negative_ = true;
+    } else {
+      throw std::invalid_argument(
+          "Atom(parser::NotFormula): formula must be negative predicate");
+    }
+  }
+
+  Atom(parser::FolFormula formula) {
+    if (matcher::check::Not()(formula)) {
+      std::optional<parser::NotFormula> not_f;
+      matcher::RefNot(not_f).match(std::move(formula));
+      *this = Atom(std::move(*not_f));
+      negative_ = true;
+    } else {
+      std::optional<parser::PredicateFormula> pred;
+      matcher::RefPred(pred).match(std::move(formula));
+      *this = Atom(std::move(*pred));
+    }
+  }
+
+  Atom(Atom&& a) { a.swap(*this); }
+
+  Atom(const Atom& a)
+      : negative_(a.negative_), predicate_name_(a.predicate_name_) {
     term_list_.reserve(a.terms_size());
     for (auto& t : a.term_list_) {
-      term_list_.push_back(transform::ReplaceTerm(t, "", ""));
+      term_list_.push_back(Clone(t));
     }
   }
 
@@ -47,6 +81,7 @@ class Atom {
   void swap(Atom& o) {
     o.term_list_.swap(term_list_);
     o.predicate_name_.swap(predicate_name_);
+    std::swap(o.negative_, negative_);
   }
 
   bool operator==(const Atom& o) const {
@@ -63,6 +98,7 @@ class Atom {
     }
   }
 
+  bool negative() const { return negative_; }
   const Term& operator[](std::size_t i) const { return term_list_[i]; }
   const auto& terms() const { return term_list_; }
   auto& terms() { return term_list_; }
@@ -83,7 +119,6 @@ class Atom {
 
   std::vector<Term> FromTermList(parser::TermList term_list) {
     std::vector<Term> terms;
-
     while (true) {
       auto [t, opt_t_list] = PopTermList(std::move(term_list));
       terms.push_back(std::move(t));
@@ -98,6 +133,7 @@ class Atom {
     return terms;
   }
 
+  bool negative_ = false;
   std::string predicate_name_;
   std::vector<Term> term_list_;
 };

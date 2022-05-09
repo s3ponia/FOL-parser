@@ -6,7 +6,7 @@
 
 namespace fol::types {
 using parser::Term;
-inline Term Clone(const Term& t) { return transform::ReplaceTerm(t, "", ""); }
+inline Term Clone(const Term& t) { return transform::CloneTerm(t); }
 inline bool operator==(const Term& lhs, const Term& rhs) {
   return parser::ToString(lhs) == parser::ToString(rhs);
 }

@@ -26,6 +26,7 @@ struct FunctionFormula {
 };
 
 struct Term {
+  Term() = default;
   Term(lexer::Constant c) : data(c) {}
   Term(lexer::Variable v) : data(v) {}
   Term(FunctionFormula f) : data(std::move(f)) {}

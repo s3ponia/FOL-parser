@@ -421,20 +421,20 @@ inline parser::ImplicationFormula QuantifiersToCNF5(
   if (matcher::check::Disj(matcher::check::Forall(),
                            matcher::check::Exists())(formula)) {
     std::optional<parser::ForallFormula> forall_f;
-    std::optional<parser::ExistsFormula> forall_h;
+    std::optional<parser::ExistsFormula> exists_h;
 
-    matcher::Disj(matcher::RefForall(forall_f), matcher::RefExists(forall_h))
+    matcher::Disj(matcher::RefForall(forall_f), matcher::RefExists(exists_h))
         .match(std::move(formula));
 
-    forall_h = RenameVar(std::move(forall_h.value()));
+    exists_h = RenameVar(std::move(exists_h.value()));
 
     parser::ImplicationFormula inner_forall = {
         parser::MakeDisj(parser::MakeConj(
-            parser::MakeForall(forall_h.value().data.first,
+            parser::MakeExists(exists_h.value().data.first,
                                {!std::move(forall_f.value().data.second) ||
-                                !std::move(forall_h.value().data.second)})))};
+                                !std::move(exists_h.value().data.second)})))};
 
-    return {parser::MakeDisj(parser::MakeConj(parser::MakeExists(
+    return {parser::MakeDisj(parser::MakeConj(parser::MakeForall(
         forall_f.value().data.first, std::move(inner_forall))))};
   }
 

@@ -35,7 +35,7 @@ class Function {
   Function(const Function& a) : function_name_(a.function_name_) {
     term_list_.reserve(a.terms_size());
     for (auto& t : a.term_list_) {
-      term_list_.push_back(transform::ReplaceTerm(t, "", ""));
+      term_list_.push_back(Clone(t));
     }
   }
 
