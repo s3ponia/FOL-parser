@@ -30,6 +30,17 @@ struct Term {
   Term(lexer::Variable v) : data(v) {}
   Term(FunctionFormula f) : data(std::move(f)) {}
 
+  bool IsConstant() const { return data.index() == 0; }
+  bool IsVar() const { return data.index() == 1; }
+  bool IsFunction() const { return data.index() == 2; }
+
+  const auto& Const() const { return std::get<0>(data); }
+  auto& Const() { return std::get<0>(data); }
+  const auto& Var() const { return std::get<1>(data); }
+  auto& Var() { return std::get<1>(data); }
+  const auto& Function() const { return std::get<2>(data); }
+  auto& Function() { return std::get<2>(data); }
+
   std::variant<lexer::Constant, lexer::Variable, FunctionFormula> data;
 };
 

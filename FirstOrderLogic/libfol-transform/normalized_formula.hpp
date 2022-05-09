@@ -56,7 +56,6 @@ class NormalizedFormula {
     }
 
     quantifiers_ = std::move(new_quantifiers);
-    std::cout << "Skolemized: " << *this << std::endl;
   }
 
   struct Quantifier {

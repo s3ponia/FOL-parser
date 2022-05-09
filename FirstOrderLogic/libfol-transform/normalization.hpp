@@ -1034,15 +1034,10 @@ inline parser::FolFormula ToCNF(parser::FolFormula formula) {
 }
 
 inline parser::FolFormula Normalize(parser::FolFormula formula) {
-  std::cout << "Remove implication: "
-            << (formula = RemoveImplication(std::move(formula))) << std::endl;
-  std::cout << "Move negative: " << (formula = MoveNegInner(std::move(formula)))
-            << std::endl;
-  std::cout << "Normalize quantifiers: "
-            << (formula = NormalizeQuantifiers(std::move(formula)))
-            << std::endl;
-  std::cout << "To conjunction normal form: "
-            << (formula = ToCNF(std::move(formula))) << std::endl;
+  formula = RemoveImplication(std::move(formula));
+  formula = MoveNegInner(std::move(formula));
+  formula = NormalizeQuantifiers(std::move(formula));
+  formula = ToCNF(std::move(formula));
   return formula;
 }
 

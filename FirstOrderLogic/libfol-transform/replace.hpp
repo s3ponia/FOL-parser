@@ -7,6 +7,7 @@
 #include <libfol-parser/parser/types.hpp>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace fol::transform {
 inline std::size_t ReplaceAll(std::string& inout, std::string_view what,
@@ -37,11 +38,25 @@ inline T RenameVar(T src) {
   return RenameVar(std::move(src), with);
 }
 
-inline parser::FolFormula RenameVar(parser::FolFormula src, std::string what,
-                                    std::string with) {
-  auto str = parser::ToString(src);
+template <class T>
+inline parser::Term ReplaceTerm(T&& src, std::string what, std::string with) {
+  auto str = parser::ToString(std::forward<T>(src));
+  ReplaceAll(str, what, with);
+  auto generator = lexer::Tokenize(str);
+  auto it = generator.begin();
+  return parser::ParseTerm(it);
+}
+
+template <class T>
+inline parser::FolFormula Replace(T&& src, std::string what, std::string with) {
+  auto str = parser::ToString(std::forward<T>(src));
   ReplaceAll(str, what, with);
   return parser::Parse(lexer::Tokenize(str));
+}
+
+inline parser::FolFormula RenameVar(parser::FolFormula src, std::string what,
+                                    std::string with) {
+  return Replace(src, what, with);
 }
 }  // namespace fol::transform
 

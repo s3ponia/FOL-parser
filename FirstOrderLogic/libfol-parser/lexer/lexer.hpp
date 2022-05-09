@@ -92,14 +92,13 @@ struct LexerError : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
+inline std::string::size_type i = 0;
+
 inline LexemeGenerator Tokenize(std::string string) {
-  std::string::size_type i = 0;
+  i = 0;
   while (i < string.size()) {
     i = details::utils::SkipWhiteSpaces(i, string);
     switch (string[i]) {
-      case 'c':
-        co_yield Constant{details::utils::GetUntilWhiteSpace(i, string)};
-        break;
       case 'v':
         co_yield Variable{details::utils::GetUntilWhiteSpace(i, string)};
         break;
