@@ -24,12 +24,14 @@ inline bool IsAllDisj(const parser::DisjunctionFormula &formula) {
   auto str = ToString(formula);
 
   for (std::string::size_type i = 0; i < str.size(); ++i) {
-    if (str[i] == 'a' || str[i] == 'n' || str[i] == 'd' || str[i] == '-' ||
-        str[i] == '>') {
+    if ((i >= 1 && str[i - 1] == ' ' && str[i] == 'a' && i + 1 < str.size() &&
+         str[i + 1] == 'n' && i + 2 < str.size() && str[i + 2] == 'd' &&
+         i + 3 < str.size() && str[i + 3] == ' ') ||
+        (str[i] == '-' && i + 1 < str.size() && str[i + 1] == '>')) {
       return false;
     }
 
-    if (str[i] == '~' && str[i] == '(') {
+    if (str[i] == '~' && i + 1 < str.size() && str[i + 1] == '(') {
       return false;
     }
   }
@@ -818,6 +820,7 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     if (IsAllDisj(cnf)) {
       return {std::move(cnf)};
     } else {
+      std::cout << cnf << std::endl;
       return ToConjunctionNormalForm({std::move(cnf)});
     }
   }
