@@ -51,7 +51,7 @@ class Clause {
     disj = transform::DeleteUselessBrackets(std::move(disj));
     auto str = parser::ToString(disj);
 
-    auto atoms_str = details::utils::Split(str, "or");
+    auto atoms_str = details::utils::Split(str, " or ");
 
     std::vector<Atom> atoms;
     atoms.reserve(atoms_str.size());

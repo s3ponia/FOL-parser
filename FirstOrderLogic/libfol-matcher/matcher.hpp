@@ -212,7 +212,8 @@ struct BracketsMatcher {
     if (!std::holds_alternative<parser::BracketFormula>(formula_t.data)) {
       formula = parser::MakeBrackets(std::move(formula_t));
     } else {
-      formula = std::get<parser::BracketFormula>(std::move(formula_t.data));
+      return match(std::move(
+          std::get<parser::BracketFormula>(std::move(formula_t.data)).data));
     }
 
     return true;

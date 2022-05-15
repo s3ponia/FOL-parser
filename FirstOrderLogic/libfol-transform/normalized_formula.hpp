@@ -64,7 +64,7 @@ class NormalizedFormula {
     std::vector<parser::FolFormula> res;
 
     auto matrix_s = ToString(formula_matrix_);
-    auto disjunctions_s = details::utils::Split(matrix_s, "and");
+    auto disjunctions_s = details::utils::Split(matrix_s, " and ");
 
     res.reserve(disjunctions_s.size());
 

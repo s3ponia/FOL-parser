@@ -820,7 +820,6 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     if (IsAllDisj(cnf)) {
       return {std::move(cnf)};
     } else {
-      std::cout << cnf << std::endl;
       return ToConjunctionNormalForm({std::move(cnf)});
     }
   }
@@ -1037,10 +1036,10 @@ inline parser::FolFormula ToCNF(parser::FolFormula formula) {
 }
 
 inline parser::FolFormula Normalize(parser::FolFormula formula) {
-  formula = RemoveImplication(std::move(formula));
-  formula = MoveNegInner(std::move(formula));
-  formula = NormalizeQuantifiers(std::move(formula));
-  formula = ToCNF(std::move(formula));
+  formula = RemoveImplication(DeleteUselessBrackets(std::move(formula)));
+  formula = MoveNegInner(DeleteUselessBrackets(std::move(formula)));
+  formula = NormalizeQuantifiers(DeleteUselessBrackets(std::move(formula)));
+  formula = ToCNF(DeleteUselessBrackets(std::move(formula)));
   return formula;
 }
 
