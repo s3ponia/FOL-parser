@@ -1,0 +1,18 @@
+15
+( ? vX . ( ~pdistinct_points(vX,vX) ) )
+( ? vX . ( ~pdistinct_lines(vX,vX) ) )
+( ? vX . ( ~pconvergent_lines(vX,vX) ) )
+( ? vX . ? vY . ? vZ . ( ( pdistinct_points(vX,vY) -> ( pdistinct_points(vX,vZ) or pdistinct_points(vY,vZ) ) ) ) )
+( ? vX . ? vY . ? vZ . ( ( pdistinct_lines(vX,vY) -> ( pdistinct_lines(vX,vZ) or pdistinct_lines(vY,vZ) ) ) ) )
+( ? vX . ? vY . ? vZ . ( ( pconvergent_lines(vX,vY) -> ( pconvergent_lines(vX,vZ) or pconvergent_lines(vY,vZ) ) ) ) )
+( ? vX . ? vY . ? vZ . ( ( pdistinct_points(vX,vY) -> ( papart_point_and_line(vZ,fline_connecting(vX,vY)) -> ( pdistinct_points(vZ,vX) and pdistinct_points(vZ,vY) ) ) ) ) )
+( ? vX . ? vY . ? vZ . ( ( pconvergent_lines(vX,vY) -> ( ( papart_point_and_line(vZ,vX) or papart_point_and_line(vZ,vY) ) -> pdistinct_points(vZ,fintersection_point(vX,vY)) ) ) ) )
+( ? vX . ? vY . ? vU . ? vV . ( ( ( pdistinct_points(vX,vY) and pdistinct_lines(vU,vV) ) -> ( papart_point_and_line(vX,vU) or papart_point_and_line(vX,vV) or papart_point_and_line(vY,vU) or papart_point_and_line(vY,vV) ) ) ) )
+( ? vX . ? vY . ? vZ . ( ( papart_point_and_line(vX,vY) -> ( pdistinct_points(vX,vZ) or papart_point_and_line(vZ,vY) ) ) ) )
+( ? vX . ? vY . ? vZ . ( ( papart_point_and_line(vX,vY) -> ( pdistinct_lines(vY,vZ) or papart_point_and_line(vX,vZ) ) ) ) )
+( ? vX . ? vY . ( ( pconvergent_lines(vX,vY) -> pdistinct_lines(vX,vY) ) ) )
+( ? vL . ? vM . ( ~( ~pconvergent_lines(vL,vM) and ~pnot_orthogonal_through_point(vL,vM) ) ) )
+( ? vL . ? vM . ? vN . ( ( ( ( ~pconvergent_lines(vL,vM) or ~pnot_orthogonal_through_point(vL,vM) ) and ( ~pconvergent_lines(vL,vN) or ~pnot_orthogonal_through_point(vL,vN) ) ) -> ( ~pconvergent_lines(vM,vN) or ~pnot_orthogonal_through_point(vM,vN) ) ) ) )
+( ? vL . ? vM . ? vN . ( ( ( ~pnot_orthogonal_through_point(vL,vM) and ~pnot_orthogonal_through_point(vL,vN) ) -> ~pconvergent_lines(vM,vN) ) ) )
+( ? vL . ( ~ ( ~pnot_orthogonal_through_point(vL,vL) ) ) )
+
