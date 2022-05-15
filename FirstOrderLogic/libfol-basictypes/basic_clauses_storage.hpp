@@ -42,7 +42,6 @@ class BasicClausesStorage : public IClausesStorage {
     std::vector<Clause> res;
 
     for (auto& c_s : storage_) {
-      std::cout << "Try Resolve: " << c << " <<<>>> " << c_s << std::endl;
       auto o_c = unificator.Resolution(c, c_s);
       if (o_c) {
         res.push_back(*o_c);

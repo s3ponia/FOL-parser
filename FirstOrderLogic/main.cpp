@@ -34,6 +34,23 @@ T input(std::istream& is) {
   return res;
 }
 
+template <class T>
+T inputToEnd(std::istream& is) {
+  T res{};
+  T temp;
+  while (std::getline(is, temp)) {
+    res += temp;
+  }
+  return res;
+}
+
+fol::parser::FolFormula ReadLastFormula() {
+  std::optional<fol::parser::FolFormula> formula;
+  while (!(formula = Parse(inputToEnd<std::string>(std::cin)))) {
+  }
+  return std::move(*formula);
+}
+
 fol::parser::FolFormula ReadFormula() {
   std::optional<fol::parser::FolFormula> formula;
   while (!(formula = Parse(input<std::string>(std::cin)))) {
@@ -79,7 +96,7 @@ int main() {
   }
 
   std::cout << "Enter hypothesis: ";
-  fol::parser::FolFormula hypothesis = ToFol(~!ReadFormula());
+  fol::parser::FolFormula hypothesis = ToFol(~!ReadLastFormula());
   auto a_cls = ClausesFromFol(std::move(hypothesis));
   clauses.insert(clauses.cend(), a_cls.begin(), a_cls.end());
 

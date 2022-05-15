@@ -31,9 +31,11 @@ inline bool IsAllDisj(const parser::DisjunctionFormula &formula) {
       return false;
     }
 
+    /*
     if (str[i] == '~' && i + 1 < str.size() && str[i + 1] == '(') {
       return false;
     }
+    */
   }
 
   return true;
@@ -70,7 +72,6 @@ inline parser::ConjunctionFormula DropAllOutBrackets(
     parser::ConjunctionFormula formula) {
   if (matcher::check::Brackets(matcher::check::Conj())(formula)) {
     std::optional<parser::ConjunctionFormula> impl;
-    std::cout << formula << std::endl;
     matcher::Brackets(matcher::RefConj(impl)).match({std::move(formula)});
     return std::move(impl.value());
   }
@@ -481,7 +482,8 @@ inline parser::ImplicationFormula NormalizeQuantifiersStep(
 
 inline parser::ImplicationFormula NormalizeQuantifiers(
     parser::ImplicationFormula formula) {
-  formula = DeleteUselessBrackets(std::move(formula));
+  formula = DropAllOutBrackets(std::move(formula));
+  formula = DropAllBracketsInNot(std::move(formula));
 
   if (IsNoQuantifiers(formula)) {
     return formula;
@@ -600,7 +602,10 @@ inline parser::ImplicationFormula RemoveImplication(
 
 inline parser::ImplicationFormula MoveNegInner(
     parser::ImplicationFormula formula) {
-  formula = DeleteUselessBrackets(std::move(formula));
+  formula = DropAllOutBrackets(std::move(formula));
+  formula = DropAllBracketsInNot(std::move(formula));
+
+  std::cout << "Move neg inner: " << formula << std::endl;
 
   // ~(~F) = F
   if (matcher::check::Not(matcher::check::Not())(formula)) {
@@ -718,7 +723,8 @@ inline parser::ImplicationFormula MoveNegInner(
 
 inline parser::ImplicationFormula ToConjunctionNormalForm(
     parser::ImplicationFormula formula) {
-  formula = DeleteUselessBrackets(std::move(formula));
+  formula = DropAllOutBrackets(std::move(formula));
+  formula = DropAllBracketsInNot(std::move(formula));
 
   // Pred | ~Pred | [~]Pred or [~]Pred | [~]Pred and [~]Pred ::= <<end>>
   auto pred_checker = matcher::check::OrMatch(
@@ -816,9 +822,8 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     matcher::Disj(matcher::RefImpl(lhs), matcher::RefImpl(rhs))
         .match(std::move(formula));
 
-    auto cnf = DeleteUselessBrackets(
-        !ToConjunctionNormalForm(std::move(lhs.value())) ||
-        !ToConjunctionNormalForm(std::move(rhs.value())));
+    auto cnf = !ToConjunctionNormalForm(std::move(lhs.value())) ||
+               !ToConjunctionNormalForm(std::move(rhs.value()));
 
     if (IsAllDisj(cnf)) {
       return {std::move(cnf)};
@@ -835,9 +840,8 @@ inline parser::ImplicationFormula ToConjunctionNormalForm(
     matcher::Conj(matcher::RefImpl(lhs), matcher::RefImpl(rhs))
         .match(std::move(formula));
 
-    auto conj = DeleteUselessBrackets(
-        !ToConjunctionNormalForm(std::move(lhs.value())) &&
-        !ToConjunctionNormalForm(std::move(rhs.value())));
+    auto conj = !ToConjunctionNormalForm(std::move(lhs.value())) &&
+                !ToConjunctionNormalForm(std::move(rhs.value()));
 
     return {std::move(conj)};
   }
@@ -885,12 +889,13 @@ inline parser::UnaryFormula DeleteUselessBrackets(
         DeleteUselessBrackets(std::move(exists->data.second)));
   }
 
-  return !DeleteUselessBrackets(matcher::UnaryToFol(std::move(formula)));
+  return formula;
 }
 
 inline parser::ConjunctionFormula DeleteUselessBrackets(
     parser::ConjunctionFormula formula) {
   formula = DropAllOutBrackets({std::move(formula)});
+  std::cout << "DeleteUselessBrackets[conj]: " << formula << std::endl;
 
   // (A) and (B) = A and B
   if (matcher::check::Conj(matcher::check::Unary(),
@@ -901,8 +906,7 @@ inline parser::ConjunctionFormula DeleteUselessBrackets(
     matcher::Conj(matcher::RefUnary(unary_a), matcher::RefImpl(impl_b))
         .match({std::move(formula)});
 
-    impl_b = DeleteUselessBrackets(std::move(impl_b.value()));
-    auto lhs = DeleteUselessBrackets(std::move(unary_a.value()));
+    auto lhs = std::move(unary_a.value());
 
     // A >< C and D and ...
     if (matcher::check::Conj(matcher::check::Unary(),
@@ -949,6 +953,7 @@ inline parser::ConjunctionFormula DeleteUselessBrackets(
 inline parser::DisjunctionFormula DeleteUselessBrackets(
     parser::DisjunctionFormula formula) {
   formula = DropAllOutBrackets({std::move(formula)});
+  std::cout << "DeleteUselessBrackets[disj]: " << formula << std::endl;
 
   // (A) or (B) = A or B
   if (matcher::check::Disj(matcher::check::Conj(),
@@ -974,9 +979,8 @@ inline parser::DisjunctionFormula DeleteUselessBrackets(
                DeleteUselessBrackets(std::move(disj_b));
       }
 
-      return DeleteUselessBrackets(
-          DeleteUselessBrackets(std::move(disj_lhs)) ||
-          !DeleteUselessBrackets(std::move(impl_b.value())));
+      return DeleteUselessBrackets(std::move(disj_lhs)) ||
+             !DeleteUselessBrackets(std::move(impl_b.value()));
     }
 
     // B >< C or D or ...
@@ -987,11 +991,9 @@ inline parser::DisjunctionFormula DeleteUselessBrackets(
              DeleteUselessBrackets(std::move(disj_b));
     }
 
-    impl_b = DeleteUselessBrackets(std::move(impl_b.value()));
     if (matcher::check::Unary()(impl_b.value())) {
       auto unary = Match(matcher::Unary(), std::move(impl_b.value()));
-      return DeleteUselessBrackets(std::move(lhs)) ||
-             DeleteUselessBrackets(std::move(unary));
+      return DeleteUselessBrackets(std::move(lhs)) || std::move(unary);
     }
 
     return std::move(lhs) || !DeleteUselessBrackets(std::move(impl_b.value()));
@@ -1010,6 +1012,8 @@ inline parser::DisjunctionFormula DeleteUselessBrackets(
 inline parser::FolFormula DeleteUselessBrackets(parser::FolFormula formula) {
   formula = DropAllOutBrackets(std::move(formula));
   formula = DropAllBracketsInNot(std::move(formula));
+
+  std::cout << "DeleteUselessBrackets[impl]: " << formula << std::endl;
 
   // A -> (B) = A -> B
   if (matcher::check::Impl(matcher::check::Anything(),
@@ -1031,7 +1035,7 @@ inline parser::FolFormula DeleteUselessBrackets(parser::FolFormula formula) {
     return {DeleteUselessBrackets(std::move(disj.value()))};
   }
 
-  return DropAllOutBrackets(std::move(formula));
+  return formula;
 }
 
 inline parser::FolFormula ToCNF(parser::FolFormula formula) {
@@ -1039,10 +1043,14 @@ inline parser::FolFormula ToCNF(parser::FolFormula formula) {
 }
 
 inline parser::FolFormula Normalize(parser::FolFormula formula) {
-  formula = RemoveImplication(DeleteUselessBrackets(std::move(formula)));
-  formula = MoveNegInner(DeleteUselessBrackets(std::move(formula)));
-  formula = NormalizeQuantifiers(DeleteUselessBrackets(std::move(formula)));
-  formula = ToCNF(DeleteUselessBrackets(std::move(formula)));
+  std::cout << "Remove implication: " << formula << std::endl;
+  formula = RemoveImplication(std::move(formula));
+  std::cout << "Move neg inner: " << formula << std::endl;
+  formula = MoveNegInner(std::move(formula));
+  std::cout << "Normalize quantifiers: " << formula << std::endl;
+  formula = NormalizeQuantifiers(std::move(formula));
+  std::cout << "To CNF: " << formula << std::endl;
+  formula = ToCNF(std::move(formula));
   return formula;
 }
 
