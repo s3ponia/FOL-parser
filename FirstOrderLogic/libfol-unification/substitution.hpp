@@ -46,8 +46,10 @@ class Substitution {
 
   void Substitute(types::Term& term) const {
     for (auto&& sub_pair : substitute_pairs_) {
-      term = transform::ReplaceTerm(term, sub_pair.from,
-                                    parser::ToString(sub_pair.to));
+      term = transform::ReplaceTerm(term, sub_pair.from + ", ",
+                                    parser::ToString(sub_pair.to) + ", ");
+      term = transform::ReplaceTerm(term, sub_pair.from + ")",
+                                    parser::ToString(sub_pair.to) + ")");
     }
   }
 

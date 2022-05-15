@@ -94,7 +94,10 @@ class Atom {
 
   void Substitute(const Variable& from, const Term& to) {
     for (auto& term : term_list_) {
-      term = transform::ReplaceTerm(term, from, parser::ToString(to));
+      term = transform::ReplaceTerm(term, from + ", ",
+                                    parser::ToString(to) + ", ");
+      term =
+          transform::ReplaceTerm(term, from + ")", parser::ToString(to) + ")");
     }
   }
 

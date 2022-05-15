@@ -73,6 +73,7 @@ int main() {
   std::vector<fol::types::Clause> clauses;
 
   for (auto& a : axioms) {
+    std::cout << "Axiom: " << a << std::endl;
     auto a_cls = ClausesFromFol(std::move(a));
     clauses.insert(clauses.cend(), a_cls.begin(), a_cls.end());
   }

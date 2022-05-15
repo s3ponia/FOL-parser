@@ -70,6 +70,7 @@ inline parser::ConjunctionFormula DropAllOutBrackets(
     parser::ConjunctionFormula formula) {
   if (matcher::check::Brackets(matcher::check::Conj())(formula)) {
     std::optional<parser::ConjunctionFormula> impl;
+    std::cout << formula << std::endl;
     matcher::Brackets(matcher::RefConj(impl)).match({std::move(formula)});
     return std::move(impl.value());
   }
@@ -599,6 +600,8 @@ inline parser::ImplicationFormula RemoveImplication(
 
 inline parser::ImplicationFormula MoveNegInner(
     parser::ImplicationFormula formula) {
+  formula = DeleteUselessBrackets(std::move(formula));
+
   // ~(~F) = F
   if (matcher::check::Not(matcher::check::Not())(formula)) {
     std::optional<parser::ImplicationFormula> unary;
@@ -956,7 +959,7 @@ inline parser::DisjunctionFormula DeleteUselessBrackets(
     matcher::Disj(matcher::RefConj(conj_a), matcher::RefImpl(impl_b))
         .match({std::move(formula)});
 
-    auto lhs = DeleteUselessBrackets(std::move(conj_a.value()));
+    auto lhs = std::move(conj_a.value());
 
     // A >< (C or D or ...)
     if (matcher::check::Disj(matcher::check::Anything(),
