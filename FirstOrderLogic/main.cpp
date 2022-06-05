@@ -7,6 +7,7 @@
 #include <libfol-prover/prover.hpp>
 #include <libfol-transform/normalization.hpp>
 #include <libfol-transform/normalized_formula.hpp>
+#include <libfol-unification/martelli_montanari_unification.hpp>
 #include <libfol-unification/robinson_unification.hpp>
 #include <numeric>
 #include <optional>
@@ -105,7 +106,7 @@ int main() {
   }
 
   auto prover = fol::prover::Prover(
-      std::make_unique<fol::unification::RobinsonUnificator>(),
+      std::make_unique<fol::unification::MartelliMontanariUnificator>(),
       std::make_unique<fol::types::BasicClausesStorage>(std::move(clauses)),
       std::make_unique<fol::types::BasicClausesStorage>());
 

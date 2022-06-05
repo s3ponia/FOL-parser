@@ -90,6 +90,32 @@ inline parser::ImplicationFormula DropAllOutBrackets(
   return formula;
 }
 
+inline parser::DisjunctionFormula DropAllBracketsInNot(
+    parser::DisjunctionFormula formula) {
+  // ~(((...(F)...))) = ~(F)
+  if (matcher::check::Not(matcher::check::Brackets())(formula)) {
+    std::optional<parser::DisjunctionFormula> impl;
+    matcher::Not(matcher::Brackets(matcher::RefDisj(impl)))
+        .match(ToFol(std::move(formula)));
+
+    formula = MakeDisj(MakeConj(~!DropAllOutBrackets(std::move(impl.value()))));
+  }
+  return formula;
+}
+
+inline parser::ConjunctionFormula DropAllBracketsInNot(
+    parser::ConjunctionFormula formula) {
+  // ~(((...(F)...))) = ~(F)
+  if (matcher::check::Not(matcher::check::Brackets())(formula)) {
+    std::optional<parser::ConjunctionFormula> impl;
+    matcher::Not(matcher::Brackets(matcher::RefConj(impl)))
+        .match(ToFol(std::move(formula)));
+
+    formula = parser::MakeConj(~!DropAllOutBrackets(std::move(impl.value())));
+  }
+  return formula;
+}
+
 inline parser::ImplicationFormula DropAllBracketsInNot(
     parser::ImplicationFormula formula) {
   // ~(((...(F)...))) = ~(F)
@@ -605,8 +631,6 @@ inline parser::ImplicationFormula MoveNegInner(
   formula = DropAllOutBrackets(std::move(formula));
   formula = DropAllBracketsInNot(std::move(formula));
 
-  std::cout << "Move neg inner: " << formula << std::endl;
-
   // ~(~F) = F
   if (matcher::check::Not(matcher::check::Not())(formula)) {
     std::optional<parser::ImplicationFormula> unary;
@@ -895,7 +919,6 @@ inline parser::UnaryFormula DeleteUselessBrackets(
 inline parser::ConjunctionFormula DeleteUselessBrackets(
     parser::ConjunctionFormula formula) {
   formula = DropAllOutBrackets({std::move(formula)});
-  std::cout << "DeleteUselessBrackets[conj]: " << formula << std::endl;
 
   // (A) and (B) = A and B
   if (matcher::check::Conj(matcher::check::Unary(),
@@ -937,7 +960,8 @@ inline parser::ConjunctionFormula DeleteUselessBrackets(
              DeleteUselessBrackets(std::move(unary));
     }
 
-    return std::move(lhs) && !DeleteUselessBrackets(std::move(impl_b.value()));
+    return DeleteUselessBrackets(std::move(lhs)) &&
+           !DeleteUselessBrackets(std::move(impl_b.value()));
   }
 
   if (matcher::check::Unary()(formula)) {
@@ -953,7 +977,6 @@ inline parser::ConjunctionFormula DeleteUselessBrackets(
 inline parser::DisjunctionFormula DeleteUselessBrackets(
     parser::DisjunctionFormula formula) {
   formula = DropAllOutBrackets({std::move(formula)});
-  std::cout << "DeleteUselessBrackets[disj]: " << formula << std::endl;
 
   // (A) or (B) = A or B
   if (matcher::check::Disj(matcher::check::Conj(),
@@ -996,7 +1019,8 @@ inline parser::DisjunctionFormula DeleteUselessBrackets(
       return DeleteUselessBrackets(std::move(lhs)) || std::move(unary);
     }
 
-    return std::move(lhs) || !DeleteUselessBrackets(std::move(impl_b.value()));
+    return DeleteUselessBrackets(std::move(lhs)) ||
+           !DeleteUselessBrackets(std::move(impl_b.value()));
   }
 
   if (matcher::check::Conj()(formula)) {
@@ -1011,9 +1035,6 @@ inline parser::DisjunctionFormula DeleteUselessBrackets(
 
 inline parser::FolFormula DeleteUselessBrackets(parser::FolFormula formula) {
   formula = DropAllOutBrackets(std::move(formula));
-  formula = DropAllBracketsInNot(std::move(formula));
-
-  std::cout << "DeleteUselessBrackets[impl]: " << formula << std::endl;
 
   // A -> (B) = A -> B
   if (matcher::check::Impl(matcher::check::Anything(),
@@ -1043,13 +1064,9 @@ inline parser::FolFormula ToCNF(parser::FolFormula formula) {
 }
 
 inline parser::FolFormula Normalize(parser::FolFormula formula) {
-  std::cout << "Remove implication: " << formula << std::endl;
   formula = RemoveImplication(std::move(formula));
-  std::cout << "Move neg inner: " << formula << std::endl;
   formula = MoveNegInner(std::move(formula));
-  std::cout << "Normalize quantifiers: " << formula << std::endl;
   formula = NormalizeQuantifiers(std::move(formula));
-  std::cout << "To CNF: " << formula << std::endl;
   formula = ToCNF(std::move(formula));
   return formula;
 }

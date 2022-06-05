@@ -109,33 +109,6 @@ class Atom {
   const std::string& predicate_name() const { return predicate_name_; }
 
  private:
-  std::pair<Term, std::optional<parser::TermList>> PopTermList(
-      parser::TermList term_list) {
-    if (std::holds_alternative<lexer::EPS>(term_list.data.second.data)) {
-      return {std::move(term_list.data.first), std::nullopt};
-    } else {
-      return {std::move(term_list.data.first),
-              std::move(*std::get<std::unique_ptr<parser::TermList>>(
-                  term_list.data.second.data))};
-    }
-  }
-
-  std::vector<Term> FromTermList(parser::TermList term_list) {
-    std::vector<Term> terms;
-    while (true) {
-      auto [t, opt_t_list] = PopTermList(std::move(term_list));
-      terms.push_back(std::move(t));
-
-      if (opt_t_list.has_value()) {
-        term_list = std::move(*opt_t_list);
-      } else {
-        break;
-      }
-    }
-
-    return terms;
-  }
-
   bool negative_ = false;
   std::string predicate_name_;
   std::vector<Term> term_list_;

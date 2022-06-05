@@ -14,7 +14,7 @@ class RobinsonUnificator : public IUnificator {
                                         const types::Atom& rhs) const override {
     using fol::types::operator==;
 
-    if (lhs.predicate_name() != rhs.predicate_name() &&
+    if (lhs.predicate_name() != rhs.predicate_name() ||
         lhs.terms().size() != rhs.terms().size()) {
       return std::nullopt;
     }

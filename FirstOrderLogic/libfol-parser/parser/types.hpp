@@ -2,6 +2,7 @@
 
 #include <libfol-parser/lexer/lexer.hpp>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -364,6 +365,41 @@ inline FolFormula ToFol(ConjunctionFormula formula) {
 
 inline FolFormula ToFol(UnaryFormula formula) {
   return ToFol(MakeConj(std::move(formula)));
+}
+
+inline std::pair<Term, std::optional<parser::TermList>> PopTermList(
+    parser::TermList term_list) {
+  if (std::holds_alternative<lexer::EPS>(term_list.data.second.data)) {
+    return {std::move(term_list.data.first), std::nullopt};
+  } else {
+    return {std::move(term_list.data.first),
+            std::move(*std::get<std::unique_ptr<parser::TermList>>(
+                term_list.data.second.data))};
+  }
+}
+
+inline std::vector<Term> FromTermList(parser::TermList term_list) {
+  std::vector<Term> terms;
+  while (true) {
+    auto [t, opt_t_list] = PopTermList(std::move(term_list));
+    terms.push_back(std::move(t));
+
+    if (opt_t_list.has_value()) {
+      term_list = std::move(*opt_t_list);
+    } else {
+      break;
+    }
+  }
+
+  return terms;
+}
+
+inline const auto& FunctionName(const FunctionFormula& fun) {
+  return fun.data->first;
+}
+
+inline auto FunctionTerms(FunctionFormula fun) {
+  return FromTermList(std::move(fun.data->second));
 }
 
 }  // namespace fol::parser

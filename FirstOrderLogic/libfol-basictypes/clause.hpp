@@ -42,6 +42,11 @@ class Clause {
            std::equal(atoms_.begin(), atoms_.end(), o.atoms_.begin());
   }
 
+  bool operator<(const Clause& o) const {
+    return std::lexicographical_compare(atoms_.begin(), atoms_.end(),
+                                        o.atoms_.begin(), o.atoms_.end());
+  }
+
   bool empty() const { return atoms_.empty(); }
 
   bool IsTautology() const;
