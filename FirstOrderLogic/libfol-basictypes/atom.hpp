@@ -103,6 +103,7 @@ class Atom {
 
   bool negative() const { return negative_; }
   const Term& operator[](std::size_t i) const { return term_list_[i]; }
+  Term& operator[](std::size_t i) { return term_list_[i]; }
   const auto& terms() const { return term_list_; }
   auto& terms() { return term_list_; }
   std::size_t terms_size() const { return term_list_.size(); }

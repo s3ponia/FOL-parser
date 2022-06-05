@@ -367,6 +367,49 @@ inline FolFormula ToFol(UnaryFormula formula) {
   return ToFol(MakeConj(std::move(formula)));
 }
 
+template <class Ret>
+struct TermListIterator {
+  TermListIterator() = default;
+  TermListIterator(TermList* term_list) : term_list_(term_list) {}
+
+  bool operator==(const TermListIterator& o) const {
+    return o.term_list_ == term_list_;
+  }
+
+  auto operator++() {
+    if (term_list_.has_value()) {
+      term_list_ = PopTermList(term_list_.value()).second;
+    }
+    return *this;
+  }
+
+  auto operator++(int) {
+    auto sv = *this;
+    return sv;
+  }
+
+  Ret* operator->() const { return PopTermList(term_list_.value()).first; }
+
+  Ret& operator*() const { return *PopTermList(term_list_.value()).first; }
+
+ private:
+  static std::pair<Ret*, std::optional<parser::TermList*>> PopTermList(
+      parser::TermList* term_list) {
+    if (std::holds_alternative<lexer::EPS>(term_list->data.second.data)) {
+      return {&(term_list->data.first), std::nullopt};
+    } else {
+      return {&(term_list->data.first),
+              &(*std::get<std::unique_ptr<parser::TermList>>(
+                  term_list->data.second.data))};
+    }
+  }
+
+  std::optional<TermList*> term_list_;
+};
+
+using TermListIt = TermListIterator<Term>;
+using ConstTermListIt = TermListIterator<const Term>;
+
 inline std::pair<Term, std::optional<parser::TermList>> PopTermList(
     parser::TermList term_list) {
   if (std::holds_alternative<lexer::EPS>(term_list.data.second.data)) {
@@ -396,6 +439,10 @@ inline std::vector<Term> FromTermList(parser::TermList term_list) {
 
 inline const auto& FunctionName(const FunctionFormula& fun) {
   return fun.data->first;
+}
+
+inline auto FunctionTermsIt(FunctionFormula& fun) {
+  return TermListIt(&fun.data->second);
 }
 
 inline auto FunctionTerms(FunctionFormula fun) {

@@ -66,6 +66,8 @@ class IUnificator {
 
           sub->Substitute(cpy_lhs);
 
+          Simplify(cpy_lhs);
+
           std::cout << "Resolution: " << lhs << " RESOLVE " << rhs << " >>> "
                     << cpy_lhs << std::endl;
 
