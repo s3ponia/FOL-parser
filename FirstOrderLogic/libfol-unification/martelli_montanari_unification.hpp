@@ -61,14 +61,22 @@ class MartelliMontanariUnificator : public IUnificator {
         auto substitution =
             Substitution{{{eq.first.Var(), std::move(eq.second)}}};
 
-        equalities.erase(eq_it);
+        auto flag_contains = false;
 
         for (auto i = equalities.begin(); i != equalities.end(); ++i) {
-          substitution.Substitute(i->first);
-          substitution.Substitute(i->second);
+          if (i != eq_it) {
+            flag_contains |= types::Contains(i->first, eq.first) ||
+                             types::Contains(i->second, eq.first);
+            substitution.Substitute(i->first);
+            substitution.Substitute(i->second);
+          }
         }
 
-        return Result::OK;
+        if (flag_contains) {
+          return Result::OK;
+        } else {
+          continue;
+        }
       }
       // RULE 4 END
     }

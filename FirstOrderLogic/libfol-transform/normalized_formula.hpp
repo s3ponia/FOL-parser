@@ -42,12 +42,13 @@ class NormalizedFormula {
       }
 
       if (new_quantifiers.empty()) {
+        auto fun = UniqFunName();
         formula_matrix_ =
             Replace(std::move(formula_matrix_), quantifiers_[i].variable + ",",
-                    UniqFunName() + "(cEMPTY),");
+                    fun + "(cEMPTY),");
         formula_matrix_ =
             Replace(std::move(formula_matrix_), quantifiers_[i].variable + ")",
-                    UniqFunName() + "(cEMPTY))");
+                    fun + "(cEMPTY))");
       } else {
         std::string new_n_fun =
             std::accumulate(new_quantifiers.begin() + 1, new_quantifiers.end(),

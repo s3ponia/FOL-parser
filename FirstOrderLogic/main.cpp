@@ -129,10 +129,12 @@ int main() {
   auto a_cls = ClausesFromFol(std::move(hypothesis));
   clauses.insert(clauses.cend(), a_cls.begin(), a_cls.end());
 
-  auto unifier = std::make_unique<fol::unification::RobinsonUnificator>();
+  auto unifier =
+      std::make_unique<fol::unification::MartelliMontanariUnificator>();
 
   for (auto& c : clauses) {
     unifier->Simplify(c);
+    std::cout << c.id() << ": " << c << std::endl;
   }
 
   auto prover = fol::prover::Prover(
