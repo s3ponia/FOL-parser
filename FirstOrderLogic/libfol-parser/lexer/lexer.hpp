@@ -164,7 +164,7 @@ inline LexemeGenerator Tokenize(std::string string) {
         i += 2;
         break;
       default:
-        throw LexerError{"Unhandled lexem"};
+        throw LexerError{std::string{"Unhandled lexem: \'"} + string[i] + "'"};
     }
   }
   for (;;) {

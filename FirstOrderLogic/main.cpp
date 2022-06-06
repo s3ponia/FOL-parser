@@ -78,6 +78,33 @@ std::vector<fol::types::Clause> ClausesFromFol(
   return res;
 }
 
+void CollectAncestors(const fol::types::Clause& clause,
+                      std::map<std::size_t, fol::types::Clause>& map) {
+  auto& ancestors = clause.ancestors();
+  for (auto& clause : ancestors) {
+    CollectAncestors(clause, map);
+  }
+  map[clause.id()] = clause;
+}
+
+void PrintProof(const fol::types::Clause& clause) {
+  std::map<std::size_t, fol::types::Clause> map;
+  CollectAncestors(clause, map);
+
+  for (auto& [k, v] : map) {
+    std::cout << k << ": " << v;
+    auto& ancestors = v.ancestors();
+    std::cout << "[ ";
+    if (ancestors.empty()) {
+      std::cout << "AXIOM ";
+    }
+    for (auto& clause : ancestors) {
+      std::cout << clause.id() << " ";
+    }
+    std::cout << "]\n";
+  }
+}
+
 int main() {
   std::cout << "Enter axioms' number: ";
   int axioms_count;
@@ -102,14 +129,22 @@ int main() {
   auto a_cls = ClausesFromFol(std::move(hypothesis));
   clauses.insert(clauses.cend(), a_cls.begin(), a_cls.end());
 
+  auto unifier = std::make_unique<fol::unification::RobinsonUnificator>();
+
   for (auto& c : clauses) {
-    std::cout << c << std::endl;
+    unifier->Simplify(c);
   }
 
   auto prover = fol::prover::Prover(
-      std::make_unique<fol::unification::HEREUnificator>(),
+      std::move(unifier),
       std::make_unique<fol::types::BasicClausesStorage>(std::move(clauses)),
       std::make_unique<fol::types::BasicClausesStorage>());
 
-  std::cout << std::boolalpha << prover.Provable() << std::endl;
+  auto res = prover.Prove();
+
+  if (res) {
+    PrintProof(*res);
+  } else {
+    std::cout << "No proof" << std::endl;
+  }
 }

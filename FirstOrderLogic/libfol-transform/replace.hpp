@@ -56,6 +56,15 @@ inline parser::Term ReplaceTerm(T&& src, std::string what, std::string with) {
 }
 
 template <class T>
+inline parser::FolFormula ReplaceWithConst(T&& src, std::string what) {
+  auto str = parser::ToString(std::forward<T>(src));
+  ++cnt;
+  auto with = "cu" + std::to_string(cnt);
+  ReplaceAll(str, what, with);
+  return parser::Parse(lexer::Tokenize(str));
+}
+
+template <class T>
 inline parser::FolFormula Replace(T&& src, std::string what) {
   auto str = parser::ToString(std::forward<T>(src));
   ++cnt;

@@ -111,6 +111,22 @@ class RobinsonUnificator : public IUnificator {
 
           res += Substitution({{t2_cp.Var(), t1_cp}});
         }
+
+        if (t1_cp.IsFunction() && t2_cp.IsFunction()) {
+          auto sub = Unificate(std::move(t1_cp.Function()),
+                               std::move(t2_cp.Function()));
+
+          if (sub.has_value()) {
+            res += *sub;
+          } else {
+            return std::nullopt;
+          }
+        }
+
+        if (t1_cp.IsConstant() && t2_cp.IsConstant() &&
+            t1_cp.Const() != t2_cp.Const()) {
+          return std::nullopt;
+        }
       }
     }
 

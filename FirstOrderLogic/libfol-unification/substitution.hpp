@@ -3,6 +3,7 @@
 #include <libfol-basictypes/clause.hpp>
 #include <libfol-basictypes/term.hpp>
 #include <libfol-basictypes/variable.hpp>
+#include <ostream>
 #include <vector>
 
 namespace fol::unification {
@@ -18,6 +19,15 @@ class Substitution {
     SubstitutePair(const types::Variable& from, const types::Term& to)
         : from(from), to(types::Clone(to)) {}
   };
+
+  friend std::ostream& operator<<(std::ostream& os, const Substitution& sub) {
+    os << "[ ";
+    for (auto& p : sub.substitute_pairs_) {
+      os << "{" << p.to << "/" << p.from << "} ";
+    }
+    os << "]";
+    return os;
+  }
 
   Substitution() = default;
 
@@ -46,10 +56,16 @@ class Substitution {
 
   void Substitute(types::Term& term) const {
     for (auto&& sub_pair : substitute_pairs_) {
-      term = transform::ReplaceTerm(term, sub_pair.from + ", ",
-                                    parser::ToString(sub_pair.to) + ", ");
-      term = transform::ReplaceTerm(term, sub_pair.from + ")",
-                                    parser::ToString(sub_pair.to) + ")");
+      auto&& from = sub_pair.from;
+      auto&& to = sub_pair.to;
+      if (term.IsVar() && term.Var() == from) {
+        term = transform::ReplaceTerm(term, from, parser::ToString(to));
+      } else {
+        term = transform::ReplaceTerm(term, from + ",",
+                                      parser::ToString(to) + ",");
+        term = transform::ReplaceTerm(term, from + ")",
+                                      parser::ToString(to) + ")");
+      }
     }
   }
 

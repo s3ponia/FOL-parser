@@ -4,6 +4,7 @@
 #include <libfol-basictypes/clauses_storage_interface.hpp>
 #include <libfol-unification/unification_interface.hpp>
 #include <memory>
+#include <optional>
 
 namespace fol::prover {
 class Prover {
@@ -15,7 +16,7 @@ class Prover {
         passive_clauses_(std::move(passive_storage)),
         active_clauses_(std::move(active_storage)) {}
 
-  bool Provable() {
+  std::optional<types::Clause> Prove() {
     while (!passive_clauses_->empty()) {
       auto o_current = passive_clauses_->NextClause();
       if (!o_current.has_value()) {
@@ -26,10 +27,12 @@ class Prover {
 
       active_clauses_->AddClause(current);
       auto new_clauses = active_clauses_->Infer(current, *unificator_);
+      auto empty_clause_it =
+          std::find_if(new_clauses.begin(), new_clauses.end(),
+                       [](auto &&clause) { return clause.empty(); });
 
-      if (std::any_of(new_clauses.begin(), new_clauses.end(),
-                      [](auto &&clause) { return clause.empty(); })) {
-        return true;
+      if (empty_clause_it != new_clauses.end()) {
+        return *empty_clause_it;
       }
 
       for (auto &&clause : new_clauses) {
@@ -37,7 +40,7 @@ class Prover {
       }
     }
 
-    return false;
+    return std::nullopt;
   }
 
  private:

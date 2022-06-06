@@ -71,6 +71,11 @@ class IUnificator {
           std::cout << "Resolution: " << lhs << " RESOLVE " << rhs << " >>> "
                     << cpy_lhs << std::endl;
 
+          cpy_lhs.ClearAncestors();
+          cpy_lhs.GenerateId();
+          cpy_lhs.AddAncestor(lhs);
+          cpy_lhs.AddAncestor(rhs);
+
           return cpy_lhs;
         }
       }

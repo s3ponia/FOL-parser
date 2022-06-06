@@ -24,7 +24,7 @@ class Function {
          ++i) {
       os << ", " << parser::ToString(function.term_list_[i]);
     }
-    os << ")\n";
+    os << ")";
     return os;
   }
 
@@ -60,8 +60,8 @@ class Function {
 
   void Substitute(const Variable& from, const Term& to) {
     for (auto& term : term_list_) {
-      term = transform::ReplaceTerm(term, from + ", ",
-                                    parser::ToString(to) + ", ");
+      term =
+          transform::ReplaceTerm(term, from + ",", parser::ToString(to) + ",");
       term =
           transform::ReplaceTerm(term, from + ")", parser::ToString(to) + ")");
     }

@@ -12,13 +12,17 @@ namespace fol::types {
 class Clause {
  public:
   friend std::ostream& operator<<(std::ostream& os, const Clause& c) {
-    os << "{";
-    for (std::size_t i = 0; i < c.atoms_.size(); ++i) {
-      os << c.atoms_[i] << (i == c.atoms_.size() - 1 ? "" : ", ");
+    if (c.atoms_.empty()) {
+      os << "EMPTY";
+      return os;
     }
-    os << "}";
+    for (std::size_t i = 0; i < c.atoms_.size(); ++i) {
+      os << c.atoms_[i] << (i == c.atoms_.size() - 1 ? "" : " or ");
+    }
     return os;
   }
+
+  Clause() = default;
 
   Clause(const std::vector<Atom>& atoms) : atoms_(atoms) {
     std::sort(atoms_.begin(), atoms_.end());
@@ -47,6 +51,16 @@ class Clause {
                                         o.atoms_.begin(), o.atoms_.end());
   }
 
+  void ClearAncestors() { ancestors_.clear(); }
+
+  void GenerateId() { id_ = ++counter; }
+
+  void AddAncestor(const Clause& o) { ancestors_.push_back(o); }
+
+  const std::vector<Clause>& ancestors() const { return ancestors_; }
+
+  std::size_t id() const { return id_; }
+
   bool empty() const { return atoms_.empty(); }
 
   bool IsTautology() const;
@@ -68,6 +82,10 @@ class Clause {
     return atoms;
   }
 
+  static inline std::size_t counter = 0;
+
   std::vector<Atom> atoms_;
+  std::vector<Clause> ancestors_;
+  std::size_t id_ = ++counter;
 };
 };  // namespace fol::types

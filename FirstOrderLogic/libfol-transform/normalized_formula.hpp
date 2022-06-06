@@ -43,7 +43,11 @@ class NormalizedFormula {
 
       if (new_quantifiers.empty()) {
         formula_matrix_ =
-            Replace(std::move(formula_matrix_), quantifiers_[i].variable);
+            Replace(std::move(formula_matrix_), quantifiers_[i].variable + ",",
+                    UniqFunName() + "(cEMPTY),");
+        formula_matrix_ =
+            Replace(std::move(formula_matrix_), quantifiers_[i].variable + ")",
+                    UniqFunName() + "(cEMPTY))");
       } else {
         std::string new_n_fun =
             std::accumulate(new_quantifiers.begin() + 1, new_quantifiers.end(),
@@ -52,8 +56,12 @@ class NormalizedFormula {
                               return lhs + ", " + rhs.variable;
                             }) +
             ")";
-        formula_matrix_ = RenameVar(std::move(formula_matrix_),
-                                    quantifiers_[i].variable, new_n_fun);
+        formula_matrix_ =
+            Replace(std::move(formula_matrix_), quantifiers_[i].variable + ",",
+                    new_n_fun + ",");
+        formula_matrix_ =
+            Replace(std::move(formula_matrix_), quantifiers_[i].variable + ")",
+                    new_n_fun + ")");
       }
     }
 
