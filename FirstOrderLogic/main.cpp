@@ -2,6 +2,7 @@
 #include <iostream>
 #include <libfol-basictypes/basic_clauses_storage.hpp>
 #include <libfol-basictypes/short_precedence_clauses_storage.hpp>
+#include <libfol-basictypes/strikeout_clauses_storage.hpp>
 #include <libfol-parser/lexer/lexer.hpp>
 #include <libfol-parser/parser/parser.hpp>
 #include <libfol-parser/parser/types.hpp>
@@ -130,18 +131,22 @@ int main() {
   auto a_cls = ClausesFromFol(std::move(hypothesis));
   clauses.insert(clauses.cend(), a_cls.begin(), a_cls.end());
 
-  auto unifier = std::make_unique<fol::unification::HEREUnificator>();
+  auto unifier = [] {
+    return std::make_unique<fol::unification::HEREUnificator>();
+  };
+
+  auto tm_un = unifier();
 
   for (auto& c : clauses) {
-    unifier->Simplify(c);
+    tm_un->Simplify(c);
     std::cout << c.id() << ": " << c << std::endl;
   }
 
   auto prover = fol::prover::Prover(
-      std::move(unifier),
-      std::make_unique<fol::types::ShortPrecedenceClausesStorage>(
-          std::move(clauses)),
-      std::make_unique<fol::types::ShortPrecedenceClausesStorage>());
+      unifier(),
+      std::make_unique<fol::types::StrikeoutClausesStorage>(std::move(clauses),
+                                                            unifier()),
+      std::make_unique<fol::types::StrikeoutClausesStorage>(unifier()));
 
   auto res = prover.Prove();
 

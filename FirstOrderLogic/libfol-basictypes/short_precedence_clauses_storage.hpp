@@ -32,7 +32,7 @@ class ShortPrecedenceClausesStorage : public IClausesStorage {
     return ret;
   }
 
-  bool Contains(const Clause& c) override { return storage_.contains(c); }
+  bool Contains(const Clause& c) const override { return storage_.contains(c); }
 
   void AddClause(const Clause& c) override {
     if (!Contains(c)) {

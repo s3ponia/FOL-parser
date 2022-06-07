@@ -45,8 +45,29 @@ class IUnificator {
     std::sort(atoms_.begin(), atoms_.end());
   }
 
-  std::optional<types::Clause> Resolution(const types::Clause& lhs,
-                                          const types::Clause& rhs) const {
+  bool IsPartOf(const types::Clause& lhs, const types::Clause& rhs) const {
+    for (auto& lhs_atom : lhs.atoms()) {
+      bool contains = false;
+      for (auto& rhs_atom : rhs.atoms()) {
+        if (rhs_atom.negative() != lhs_atom.negative()) {
+          continue;
+        }
+        if (auto sub = Unificate(lhs_atom, rhs_atom)) {
+          contains = true;
+          break;
+        }
+      }
+      if (!contains) {
+        return false;
+      }
+    }
+
+    std::cout << rhs << " is part of " << lhs << std::endl;
+    return true;
+  }
+
+  std::optional<types::Clause> Resolution(types::Clause lhs,
+                                          types::Clause rhs) const {
     for (std::size_t i = 0; i < lhs.atoms().size(); ++i) {
       for (std::size_t j = 0; j < rhs.atoms().size(); ++j) {
         if ((lhs.atoms()[i].negative() + rhs.atoms()[j].negative()) % 2 == 1) {
@@ -82,6 +103,17 @@ class IUnificator {
       }
     }
     return std::nullopt;
+  }
+
+  bool IsTautology(const types::Clause& c) const {
+    for (auto& a_1 : c.atoms()) {
+      for (auto& a_2 : c.atoms()) {
+        if (a_1.negative() != a_2.negative() && Unificate(a_1, a_2)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 };
 }  // namespace fol::unification

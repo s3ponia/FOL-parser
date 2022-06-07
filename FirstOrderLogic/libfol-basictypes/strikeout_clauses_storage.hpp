@@ -3,20 +3,26 @@
 #include <libfol-basictypes/clause.hpp>
 #include <libfol-basictypes/clauses_storage_interface.hpp>
 #include <list>
+#include <memory>
 #include <optional>
 #include <vector>
 
 #include "libfol-unification/unification_interface.hpp"
 
 namespace fol::types {
-class BasicClausesStorage : public IClausesStorage {
+class StrikeoutClausesStorage : public IClausesStorage {
  public:
   using StorageType = std::list<Clause>;
-  BasicClausesStorage() = default;
+  StrikeoutClausesStorage(std::unique_ptr<unification::IUnificator> unifier)
+      : unifier_(std::move(unifier)) {}
   template <class T>
-  BasicClausesStorage(const T& s) {
+  StrikeoutClausesStorage(const T& s,
+                          std::unique_ptr<unification::IUnificator> unifier)
+      : unifier_(std::move(unifier)) {
     for (auto& c : s) {
-      AddClause(c);
+      if (!Contains(c) && !unifier_->IsTautology(c)) {
+        storage_.push_back(c);
+      }
     }
   }
 
@@ -34,8 +40,24 @@ class BasicClausesStorage : public IClausesStorage {
                        [&](auto&& cl) { return cl == c; });
   }
 
+  bool IsPartOfExistentClause(const Clause& c) const {
+    return std::any_of(storage_.begin(), storage_.end(),
+                       [&](auto&& cl) { return unifier_->IsPartOf(cl, c); });
+  }
+
+  void FilterOutPartedClauses(const Clause& c) {
+    for (auto it = storage_.begin(); it != storage_.end();) {
+      if (unifier_->IsPartOf(c, *it)) {
+        it = storage_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
   void AddClause(const Clause& c) override {
-    if (!Contains(c)) {
+    if (!Contains(c) && !IsPartOfExistentClause(c) &&
+        !unifier_->IsTautology(c)) {
       storage_.push_back(c);
     }
   }
@@ -60,6 +82,8 @@ class BasicClausesStorage : public IClausesStorage {
   }
 
  private:
+  std::unique_ptr<unification::IUnificator> unifier_;
   StorageType storage_;
 };
 }  // namespace fol::types
+

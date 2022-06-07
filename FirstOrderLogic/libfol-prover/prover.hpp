@@ -25,8 +25,8 @@ class Prover {
       std::cout << "Get clause: " << *o_current << std::endl;
       auto &current = *o_current;
 
-      active_clauses_->AddClause(current);
       auto new_clauses = active_clauses_->Infer(current, *unificator_);
+      active_clauses_->AddClause(current);
       auto empty_clause_it =
           std::find_if(new_clauses.begin(), new_clauses.end(),
                        [](auto &&clause) { return clause.empty(); });

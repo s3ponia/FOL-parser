@@ -38,6 +38,7 @@ class Clause {
   Clause& operator+=(const Clause& o) {
     atoms_.reserve(atoms_.size() + o.atoms_.size());
     atoms_.insert(atoms_.cend(), o.atoms_.begin(), o.atoms_.end());
+    std::sort(atoms_.begin(), atoms_.end());
     return *this;
   }
 
@@ -63,8 +64,6 @@ class Clause {
 
   bool empty() const { return atoms_.empty(); }
 
-  bool IsTautology() const;
-
  private:
   static std::vector<Atom> DisjunctionFormulaToAtoms(parser::FolFormula disj) {
     disj = transform::DeleteUselessBrackets(std::move(disj));
@@ -78,6 +77,8 @@ class Clause {
     for (auto& s : atoms_str) {
       atoms.push_back(Atom(parser::Parse(lexer::Tokenize(s))));
     }
+
+    std::sort(atoms.begin(), atoms.end());
 
     return atoms;
   }
