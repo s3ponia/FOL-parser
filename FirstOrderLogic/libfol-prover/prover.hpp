@@ -36,7 +36,9 @@ class Prover {
       }
 
       for (auto &&clause : new_clauses) {
-        passive_clauses_->AddClause(clause);
+        if (!active_clauses_->Contains(clause)) {
+          passive_clauses_->AddClause(clause);
+        }
       }
     }
 

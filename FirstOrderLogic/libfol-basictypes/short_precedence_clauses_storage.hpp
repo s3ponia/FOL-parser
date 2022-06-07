@@ -2,41 +2,41 @@
 
 #include <libfol-basictypes/clause.hpp>
 #include <libfol-basictypes/clauses_storage_interface.hpp>
-#include <list>
 #include <optional>
+#include <set>
 #include <vector>
 
 #include "libfol-unification/unification_interface.hpp"
 
 namespace fol::types {
-class BasicClausesStorage : public IClausesStorage {
- public:
-  using StorageType = std::list<Clause>;
-  BasicClausesStorage() = default;
-  template <class T>
-  BasicClausesStorage(const T& s) {
-    for (auto& c : s) {
-      AddClause(c);
+class ShortPrecedenceClausesStorage : public IClausesStorage {
+  struct ClauseComparator {
+    bool operator()(const Clause& lhs, const Clause& rhs) const noexcept {
+      return lhs.atoms().size() < rhs.atoms().size() ||
+             (lhs.atoms().size() == rhs.atoms().size() && lhs < rhs);
     }
-  }
+  };
+
+ public:
+  using StorageType = std::set<Clause, ClauseComparator>;
+  ShortPrecedenceClausesStorage() = default;
+  template <class T>
+  ShortPrecedenceClausesStorage(const T& s) : storage_(s.begin(), s.end()) {}
 
   std::optional<Clause> NextClause() override {
     if (storage_.empty()) {
       return std::nullopt;
     }
-    auto ret = storage_.front();
-    storage_.pop_front();
+    auto ret = *storage_.begin();
+    storage_.erase(storage_.begin());
     return ret;
   }
 
-  bool Contains(const Clause& c) override {
-    return std::any_of(storage_.begin(), storage_.end(),
-                       [&](auto&& cl) { return cl == c; });
-  }
+  bool Contains(const Clause& c) override { return storage_.contains(c); }
 
   void AddClause(const Clause& c) override {
     if (!Contains(c)) {
-      storage_.push_back(c);
+      storage_.insert(c);
     }
   }
 

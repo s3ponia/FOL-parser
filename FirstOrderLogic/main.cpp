@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <libfol-basictypes/basic_clauses_storage.hpp>
+#include <libfol-basictypes/short_precedence_clauses_storage.hpp>
 #include <libfol-parser/lexer/lexer.hpp>
 #include <libfol-parser/parser/parser.hpp>
 #include <libfol-parser/parser/types.hpp>
@@ -138,8 +139,9 @@ int main() {
 
   auto prover = fol::prover::Prover(
       std::move(unifier),
-      std::make_unique<fol::types::BasicClausesStorage>(std::move(clauses)),
-      std::make_unique<fol::types::BasicClausesStorage>());
+      std::make_unique<fol::types::ShortPrecedenceClausesStorage>(
+          std::move(clauses)),
+      std::make_unique<fol::types::ShortPrecedenceClausesStorage>());
 
   auto res = prover.Prove();
 
