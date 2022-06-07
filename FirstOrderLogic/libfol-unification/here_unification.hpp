@@ -23,9 +23,11 @@ class HEREUnificator : public IUnificator {
       std::map<types::Variable, std::variant<nil, types::Term*, loop>>;
   using MapType =
       std::map<types::Variable, std::variant<nil, types::Term*, done, loop>>;
-  using MarkedSet = std::unordered_set<types::Variable>;
+  using VarSet = std::unordered_set<types::Term*>;
 
-  static void VarHere(types::Term& var, types::Term& term, MapType& map) {
+  static void VarHere(types::Term& var, types::Term& term, MapType& map,
+                      VarSet& vars) {
+    vars.insert(&var);
     if (map[var.Var()].index() == NIL) {
       map[var.Var()] = &term;
     } else if (!term.IsVar()) {
@@ -35,7 +37,7 @@ class HEREUnificator : public IUnificator {
         map[path.front()->Var()] = &term;
       } else {
         RecurHere(*path.front(), *std::get<TERM>(map[path.front()->Var()]),
-                  term, map);
+                  term, map, vars);
       }
     } else {
       if (map[var.Var()].index() == NIL) {
@@ -64,7 +66,7 @@ class HEREUnificator : public IUnificator {
             Collapse(path2.begin(), path2.end(), *v, map);
             if (z.index() != NIL && z.index() != DONE) {
               RecurHere(*v, *std::get<TERM>(map[v->Var()]), *std::get<TERM>(z),
-                        map);
+                        map, vars);
             }
           }
         }
@@ -73,9 +75,9 @@ class HEREUnificator : public IUnificator {
   }
 
   static void RecurHere(types::Term& v, types::Term& y, types::Term& t,
-                        MapType& map) {
+                        MapType& map, VarSet& vars) {
     map[v.Var()] = loop{};
-    Here(y, t, map);
+    Here(y, t, map, vars);
     map[v.Var()] = &y;
   }
 
@@ -83,13 +85,14 @@ class HEREUnificator : public IUnificator {
     using std::runtime_error::runtime_error;
   };
 
-  static void Here(types::Term& lhs, types::Term& rhs, MapType& map) {
+  static void Here(types::Term& lhs, types::Term& rhs, MapType& map,
+                   VarSet& vars) {
     using types::operator==;
     if (lhs != rhs && !lhs.IsConstant() && !rhs.IsConstant()) {
       if (lhs.IsVar()) {
-        VarHere(lhs, rhs, map);
+        VarHere(lhs, rhs, map, vars);
       } else if (rhs.IsVar()) {
-        VarHere(rhs, lhs, map);
+        VarHere(rhs, lhs, map, vars);
       } else {
         auto& f_lhs = lhs.Function();
         auto& f_rhs = rhs.Function();
@@ -103,7 +106,7 @@ class HEREUnificator : public IUnificator {
           for (; lhs_t_list != parser::TermListIt{} &&
                  rhs_t_list != parser::TermListIt{};
                ++lhs_t_list, ++rhs_t_list) {
-            Here(*lhs_t_list, *rhs_t_list, map);
+            Here(*lhs_t_list, *rhs_t_list, map, vars);
           }
         }
       }
@@ -209,13 +212,11 @@ class HEREUnificator : public IUnificator {
     return *z;
   }
 
-  static Substitution SubstitutionFromMap(MapType& map) {
+  static Substitution SubstitutionFromMap(MapType& map, VarSet& vars) {
     SubstitutionMap s;
-    for (auto& [k, v] : map) {
-      if (v.index() == TERM && std::get<TERM>(v)->IsVar()) {
-        auto& term = *std::get<TERM>(v);
-        Vere(term, map, s);
-      }
+
+    for (auto& v : vars) {
+      Vere(*v, map, s);
     }
     std::vector<Substitution::SubstitutePair> pairs;
     pairs.reserve(s.size());
@@ -241,12 +242,13 @@ class HEREUnificator : public IUnificator {
     auto cp_rhs = rhs;
 
     MapType map;
+    VarSet vars;
 
     for (std::size_t i = 0; i < lhs.terms_size(); ++i) {
-      Here(cp_lhs[i], cp_rhs[i], map);
+      Here(cp_lhs[i], cp_rhs[i], map, vars);
     }
 
-    return SubstitutionFromMap(map);
+    return SubstitutionFromMap(map, vars);
   } catch (const ExitLoop& ex) {
     return std::nullopt;
   } catch (const ExitClash& ex) {

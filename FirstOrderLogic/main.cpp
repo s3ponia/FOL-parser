@@ -129,8 +129,7 @@ int main() {
   auto a_cls = ClausesFromFol(std::move(hypothesis));
   clauses.insert(clauses.cend(), a_cls.begin(), a_cls.end());
 
-  auto unifier =
-      std::make_unique<fol::unification::MartelliMontanariUnificator>();
+  auto unifier = std::make_unique<fol::unification::HEREUnificator>();
 
   for (auto& c : clauses) {
     unifier->Simplify(c);
