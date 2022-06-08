@@ -8,12 +8,12 @@
 namespace fol::unification {
 namespace {
 using SubstitutionMap =
-    std::map<types::Variable, std::variant<HEREUnificator::nil, types::Term*,
-                                           HEREUnificator::loop>>;
+    std::map<types::Variable, std::variant<HereUnificator::nil, types::Term*,
+                                           HereUnificator::loop>>;
 using MapType =
     std::map<types::Variable,
-             std::variant<HEREUnificator::nil, types::Term*,
-                          HEREUnificator::done, HEREUnificator::loop>>;
+             std::variant<HereUnificator::nil, types::Term*,
+                          HereUnificator::done, HereUnificator::loop>>;
 using VarSet = std::unordered_set<types::Term*>;
 void Here(types::Term& lhs, types::Term& rhs, MapType& map, VarSet& vars);
 std::deque<types::Term*> Source(types::Term& r_x, MapType& map);
@@ -24,27 +24,27 @@ types::Term& Vere(types::Term& var, MapType& map, SubstitutionMap& s);
 
 void VarHere(types::Term& var, types::Term& term, MapType& map, VarSet& vars) {
   vars.insert(&var);
-  if (map[var.Var()].index() == HEREUnificator::NIL) {
+  if (map[var.Var()].index() == HereUnificator::NIL) {
     map[var.Var()] = &term;
   } else if (!term.IsVar()) {
     auto path = Source(var, map);
     Collapse(path.begin() + 1, path.end(), *path.front(), map);
-    if (map[path.front()->Var()].index() == HEREUnificator::NIL) {
+    if (map[path.front()->Var()].index() == HereUnificator::NIL) {
       map[path.front()->Var()] = &term;
     } else {
       RecurHere(*path.front(),
-                *std::get<HEREUnificator::TERM>(map[path.front()->Var()]), term,
+                *std::get<HereUnificator::TERM>(map[path.front()->Var()]), term,
                 map, vars);
     }
   } else {
-    if (map[var.Var()].index() == HEREUnificator::NIL) {
+    if (map[var.Var()].index() == HereUnificator::NIL) {
       map[term.Var()] = &var;
     } else {
       auto path = Source(var, map);
       auto* v = path.front();
       path.pop_front();
-      if (map[v->Var()].index() == HEREUnificator::NIL ||
-          map[v->Var()].index() == HEREUnificator::DONE) {
+      if (map[v->Var()].index() == HereUnificator::NIL ||
+          map[v->Var()].index() == HereUnificator::DONE) {
         path.push_front(v);
         Collapse(path.begin(), path.end(), term, map);
         path.pop_front();
@@ -62,10 +62,10 @@ void VarHere(types::Term& var, types::Term& term, MapType& map, VarSet& vars) {
           map[w->Var()] = v;
           Collapse(path.begin(), path.end(), *v, map);
           Collapse(path2.begin(), path2.end(), *v, map);
-          if (z.index() != HEREUnificator::NIL &&
-              z.index() != HEREUnificator::DONE) {
-            RecurHere(*v, *std::get<HEREUnificator::TERM>(map[v->Var()]),
-                      *std::get<HEREUnificator::TERM>(z), map, vars);
+          if (z.index() != HereUnificator::NIL &&
+              z.index() != HereUnificator::DONE) {
+            RecurHere(*v, *std::get<HereUnificator::TERM>(map[v->Var()]),
+                      *std::get<HereUnificator::TERM>(z), map, vars);
           }
         }
       }
@@ -75,7 +75,7 @@ void VarHere(types::Term& var, types::Term& term, MapType& map, VarSet& vars) {
 
 void RecurHere(types::Term& v, types::Term& y, types::Term& t, MapType& map,
                VarSet& vars) {
-  map[v.Var()] = HEREUnificator::loop{};
+  map[v.Var()] = HereUnificator::loop{};
   Here(y, t, map, vars);
   map[v.Var()] = &y;
 }
@@ -92,7 +92,7 @@ void Here(types::Term& lhs, types::Term& rhs, MapType& map, VarSet& vars) {
       auto& f_rhs = rhs.Function();
 
       if (FunctionName(f_lhs) != FunctionName(f_rhs)) {
-        throw HEREUnificator::ExitClash{"CLASH"};
+        throw HereUnificator::ExitClash{"CLASH"};
       } else {
         auto lhs_t_list = FunctionTermsIt(lhs.Function());
         auto rhs_t_list = FunctionTermsIt(rhs.Function());
@@ -113,11 +113,11 @@ std::deque<types::Term*> Source(types::Term& r_x, MapType& map) {
   path.push_back(x);
 
   types::Term* z;
-  while (map[x->Var()].index() == HEREUnificator::TERM &&
-         std::get<HEREUnificator::TERM>(map[x->Var()])->IsVar()) {
-    z = std::get<HEREUnificator::TERM>(map[x->Var()]);
+  while (map[x->Var()].index() == HereUnificator::TERM &&
+         std::get<HereUnificator::TERM>(map[x->Var()])->IsVar()) {
+    z = std::get<HereUnificator::TERM>(map[x->Var()]);
     path.push_front(z);
-    map[x->Var()] = HEREUnificator::done{};
+    map[x->Var()] = HereUnificator::done{};
     x = z;
   }
 
@@ -136,14 +136,14 @@ types::Term& TermVere(parser::Term& t, MapType& map, SubstitutionMap& s) {
   auto t_list = FunctionTermsIt(t.Function());
   for (; t_list != parser::TermListIt{}; ++t_list) {
     if (t_list->IsVar()) {
-      if (map[t_list->Var()].index() == HEREUnificator::DONE) {
-        if (s[t_list->Var()].index() == HEREUnificator::LOOP) {
-          throw HEREUnificator::ExitLoop{"LOOP"};
+      if (map[t_list->Var()].index() == HereUnificator::DONE) {
+        if (s[t_list->Var()].index() == HereUnificator::LOOP) {
+          throw HereUnificator::ExitLoop{"LOOP"};
         } else {
           *t_list =
-              types::Clone(*std::get<HEREUnificator::TERM>(s[t_list->Var()]));
+              types::Clone(*std::get<HereUnificator::TERM>(s[t_list->Var()]));
         }
-      } else if (map[t_list->Var()].index() != HEREUnificator::NIL) {
+      } else if (map[t_list->Var()].index() != HereUnificator::NIL) {
         *t_list = types::Clone(Vere(*t_list, map, s));
       }
     } else if (t_list->IsFunction()) {
@@ -165,31 +165,31 @@ types::Term& Vere(types::Term& var, MapType& map, SubstitutionMap& s) {
 
   types::Term* z;
 
-  if (map[v->Var()].index() == HEREUnificator::NIL) {
+  if (map[v->Var()].index() == HereUnificator::NIL) {
     z = v;
-    map[v->Var()] = HEREUnificator::done{};
-  } else if (map[v->Var()].index() == HEREUnificator::TERM &&
-             std::get<HEREUnificator::TERM>(map[v->Var()])->IsConstant()) {
-    z = std::get<HEREUnificator::TERM>(map[v->Var()]);
+    map[v->Var()] = HereUnificator::done{};
+  } else if (map[v->Var()].index() == HereUnificator::TERM &&
+             std::get<HereUnificator::TERM>(map[v->Var()])->IsConstant()) {
+    z = std::get<HereUnificator::TERM>(map[v->Var()]);
     s[v->Var()] = z;
-    map[v->Var()] = HEREUnificator::done{};
-  } else if (map[v->Var()].index() == HEREUnificator::TERM &&
-             std::get<HEREUnificator::TERM>(map[v->Var()])->IsFunction()) {
-    auto* y = std::get<HEREUnificator::TERM>(map[v->Var()]);
-    map[v->Var()] = HEREUnificator::done{};
-    s[v->Var()] = HEREUnificator::loop{};
+    map[v->Var()] = HereUnificator::done{};
+  } else if (map[v->Var()].index() == HereUnificator::TERM &&
+             std::get<HereUnificator::TERM>(map[v->Var()])->IsFunction()) {
+    auto* y = std::get<HereUnificator::TERM>(map[v->Var()]);
+    map[v->Var()] = HereUnificator::done{};
+    s[v->Var()] = HereUnificator::loop{};
     for (auto& x : path) {
-      s[x->Var()] = HEREUnificator::loop{};
+      s[x->Var()] = HereUnificator::loop{};
     }
     z = &TermVere(*y, map, s);
     s[v->Var()] = z;
   } else {
-    if (s[v->Var()].index() == HEREUnificator::NIL) {
+    if (s[v->Var()].index() == HereUnificator::NIL) {
       z = v;
-    } else if (s[v->Var()].index() == HEREUnificator::LOOP) {
-      throw HEREUnificator::ExitLoop{"LOOP"};
+    } else if (s[v->Var()].index() == HereUnificator::LOOP) {
+      throw HereUnificator::ExitLoop{"LOOP"};
     } else {
-      z = std::get<HEREUnificator::TERM>(s[v->Var()]);
+      z = std::get<HereUnificator::TERM>(s[v->Var()]);
     }
   }
 
@@ -209,8 +209,8 @@ Substitution SubstitutionFromMap(MapType& map, VarSet& vars) {
   std::vector<Substitution::SubstitutePair> pairs;
   pairs.reserve(s.size());
   for (auto& [k, v] : s) {
-    if (v.index() == HEREUnificator::TERM) {
-      pairs.emplace_back(k, types::Clone(*std::get<HEREUnificator::TERM>(v)));
+    if (v.index() == HereUnificator::TERM) {
+      pairs.emplace_back(k, types::Clone(*std::get<HereUnificator::TERM>(v)));
     }
   }
 
@@ -218,7 +218,7 @@ Substitution SubstitutionFromMap(MapType& map, VarSet& vars) {
 }
 }  // namespace
 
-std::optional<Substitution> HEREUnificator::Unificate(
+std::optional<Substitution> HereUnificator::Unificate(
     const types::Atom& lhs, const types::Atom& rhs) const try {
   if (lhs.predicate_name() != rhs.predicate_name() ||
       lhs.terms_size() != rhs.terms_size()) {

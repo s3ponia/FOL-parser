@@ -16,7 +16,16 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 include_directories(FirstOrderLogic)
 
-add_executable(fol_prover "FirstOrderLogic/main.cpp")
+file(GLOB SOURCES "FirstOrderLogic/libfol-prover/src/*.cpp" 
+	"FirstOrderLogic/libfol-basictypes/src/*.cpp" 
+	"FirstOrderLogic/libfol-matcher/src/*.cpp" 
+	"FirstOrderLogic/libfol-parser/parser/src/*.cpp" 
+	"FirstOrderLogic/libfol-parser/lexer/src/*.cpp"
+	"FirstOrderLogic/libfol-transform/src/*.cpp"
+	"FirstOrderLogic/libfol-unification/src/*.cpp"
+	)
+
+add_executable(fol_prover "FirstOrderLogic/main.cpp" ${SOURCES})
 
 # Unit testing
 file(GLOB TEST_SOURCES "FirstOrderLogic/tests/*.cpp")

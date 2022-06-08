@@ -2,8 +2,8 @@
 
 namespace fol::unification {
 namespace {
-std::optional<Substitution> Unificate(const types::Function& lhs,
-                                      const types::Function& rhs) {
+std::optional<Substitution> UnificateFunction(const types::Function& lhs,
+                                              const types::Function& rhs) {
   using fol::types::operator==;
 
   if (lhs.function_name() != rhs.function_name()) {
@@ -41,8 +41,8 @@ std::optional<Substitution> Unificate(const types::Function& lhs,
       }
 
       if (t1_cp.IsFunction() && t2_cp.IsFunction()) {
-        auto sub =
-            Unificate(std::move(t1_cp.Function()), std::move(t2_cp.Function()));
+        auto sub = UnificateFunction(std::move(t1_cp.Function()),
+                                     std::move(t2_cp.Function()));
 
         if (sub.has_value()) {
           res += *sub;
@@ -106,8 +106,8 @@ std::optional<Substitution> RobinsonUnificator::Unificate(
     }
 
     if (t1_cp.IsFunction() && t2_cp.IsFunction()) {
-      auto sub =
-          Unificate(std::move(t1_cp.Function()), std::move(t2_cp.Function()));
+      auto sub = UnificateFunction(std::move(t1_cp.Function()),
+                                   std::move(t2_cp.Function()));
 
       if (sub.has_value()) {
         res += *sub;

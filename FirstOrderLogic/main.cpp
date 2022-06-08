@@ -1,8 +1,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <libfol-basictypes/basic_clauses_storage.hpp>
+#include <libfol-basictypes/basic_clauses_storage_factory.hpp>
 #include <libfol-basictypes/short_precedence_clauses_storage.hpp>
+#include <libfol-basictypes/short_precedence_clauses_storage_factory.hpp>
 #include <libfol-basictypes/strikeout_clauses_storage.hpp>
+#include <libfol-basictypes/strikeout_clauses_storage_factory.hpp>
+#include <libfol-basictypes/support_clauses_storage_factory.hpp>
 #include <libfol-parser/lexer/lexer.hpp>
 #include <libfol-parser/parser/parser.hpp>
 #include <libfol-parser/parser/types.hpp>
@@ -10,11 +14,16 @@
 #include <libfol-transform/normalization.hpp>
 #include <libfol-transform/normalized_formula.hpp>
 #include <libfol-unification/here_unification.hpp>
+#include <libfol-unification/here_unification_factory.hpp>
 #include <libfol-unification/martelli_montanari_unification.hpp>
+#include <libfol-unification/martelli_montanari_unification_factory.hpp>
 #include <libfol-unification/robinson_unification.hpp>
+#include <libfol-unification/robinson_unification_factory.hpp>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <optional>
+#include <vector>
 
 std::optional<fol::parser::FolFormula> Parse(std::string str) {
   try {
@@ -34,6 +43,13 @@ std::optional<fol::parser::FolFormula> Parse(std::string str) {
 
 template <class T>
 T input(std::istream& is) {
+  T res;
+  is >> res;
+  return res;
+}
+
+template <class T>
+T input_line(std::istream& is) {
   T res;
   std::getline(is, res);
   return res;
@@ -58,7 +74,7 @@ fol::parser::FolFormula ReadLastFormula() {
 
 fol::parser::FolFormula ReadFormula() {
   std::optional<fol::parser::FolFormula> formula;
-  while (!(formula = Parse(input<std::string>(std::cin)))) {
+  while (!(formula = Parse(input_line<std::string>(std::cin)))) {
   }
   return std::move(*formula);
 }
@@ -95,7 +111,7 @@ void PrintProof(const fol::types::Clause& clause) {
   CollectAncestors(clause, map);
 
   for (auto& [k, v] : map) {
-    std::cout << k << ": " << v;
+    std::cout << "[" << k << "] " << v;
     auto& ancestors = v.ancestors();
     std::cout << "[ ";
     if (ancestors.empty()) {
@@ -109,6 +125,33 @@ void PrintProof(const fol::types::Clause& clause) {
 }
 
 int main() {
+  std::cout << "Choose unification algorithm:\n"
+               "[1] Robinson unification\n"
+               "[2] Here unification\n"
+               "[3] Martelli-Montanari unification\n";
+  std::shared_ptr<fol::unification::IUnificatorFactory> unification_factories[]{
+      std::make_shared<fol::unification::RobinsonUnificatorFactory>(),
+      std::make_shared<fol::unification::HereUnificatorFactory>(),
+      std::make_shared<fol::unification::MartelliMontanariUnificatorFactory>()};
+
+  auto unification_factory =
+      std::move(unification_factories[input<int>(std::cin) - 1]);
+
+  std::cout << "Choose clause choosing policy:\n"
+               "[1] Saturation policy\n"
+               "[2] Short precedence policy\n"
+               "[3] Strikeout policy\n"
+               "[4] Support policy\n";
+  std::shared_ptr<fol::types::IClausesStorageFactory>
+      clauses_storage_factories[]{
+          std::make_shared<fol::types::BasicClausesStorageFactory>(),
+          std::make_shared<fol::types::ShortPrecedenceClausesStorageFactory>(),
+          std::make_shared<fol::types::StrikeoutClausesStorageFactory>(
+              unification_factory),
+          std::make_shared<fol::types::SupportClausesStorageFactory>()};
+  auto clauses_storage_factory =
+      std::move(clauses_storage_factories[input<int>(std::cin) - 1]);
+
   std::cout << "Enter axioms' number: ";
   int axioms_count;
   std::cin >> axioms_count;
@@ -119,35 +162,36 @@ int main() {
     axioms.push_back(ReadFormula());
   }
 
-  std::vector<fol::types::Clause> clauses;
+  std::vector<fol::types::Clause> axiom_clauses;
 
   for (auto& a : axioms) {
     std::cout << "Axiom: " << a << std::endl;
     auto a_cls = ClausesFromFol(std::move(a));
-    clauses.insert(clauses.cend(), a_cls.begin(), a_cls.end());
+    axiom_clauses.insert(axiom_clauses.cend(), a_cls.begin(), a_cls.end());
   }
 
   std::cout << "Enter hypothesis: ";
   fol::parser::FolFormula hypothesis = ToFol(~!ReadLastFormula());
-  auto a_cls = ClausesFromFol(std::move(hypothesis));
-  clauses.insert(clauses.cend(), a_cls.begin(), a_cls.end());
+  auto hypothesis_clauses = ClausesFromFol(std::move(hypothesis));
 
-  auto unifier = [] {
-    return std::make_unique<fol::unification::HEREUnificator>();
-  };
+  auto tm_un = unification_factory->create();
 
-  auto tm_un = unifier();
-
-  for (auto& c : clauses) {
+  for (auto& c : axiom_clauses) {
     tm_un->Simplify(c);
-    std::cout << c.id() << ": " << c << std::endl;
+    std::cout << "[" << c.id() << "] " << c << std::endl;
   }
 
-  auto prover = fol::prover::Prover(
-      unifier(),
-      std::make_unique<fol::types::StrikeoutClausesStorage>(std::move(clauses),
-                                                            unifier()),
-      std::make_unique<fol::types::StrikeoutClausesStorage>(unifier()));
+  for (auto& c : hypothesis_clauses) {
+    tm_un->Simplify(c);
+    std::cout << "[" << c.id() << "] " << c << std::endl;
+  }
+
+  auto clauses_storages = clauses_storage_factory->create(
+      std::move(axiom_clauses), std::move(hypothesis_clauses));
+
+  auto prover = fol::prover::Prover(unification_factory->create(),
+                                    std::move(clauses_storages.first),
+                                    std::move(clauses_storages.second));
 
   auto res = prover.Prove();
 

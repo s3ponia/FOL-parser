@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 namespace fol::unification {
-class HEREUnificator : public IUnificator {
+class HereUnificator : public IUnificator {
  public:
   struct nil {};
   struct done {};
