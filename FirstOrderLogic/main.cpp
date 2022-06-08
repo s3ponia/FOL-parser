@@ -12,6 +12,7 @@
 #include <libfol-unification/here_unification.hpp>
 #include <libfol-unification/martelli_montanari_unification.hpp>
 #include <libfol-unification/robinson_unification.hpp>
+#include <map>
 #include <numeric>
 #include <optional>
 

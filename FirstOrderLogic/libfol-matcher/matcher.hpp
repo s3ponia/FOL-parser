@@ -14,10 +14,7 @@ bool holds(const TFormula &lhs) {
 }
 
 struct ImplicationMatcher {
-  bool match(parser::FolFormula o) {
-    formula = std::move(o);
-    return true;
-  }
+  bool match(parser::FolFormula o);
   std::optional<parser::ImplicationFormula> formula{};
 };
 
@@ -45,15 +42,7 @@ struct ImplicationCompoundMatcher {
 };
 
 struct DisjunctionMatcher {
-  bool match(parser::FolFormula o) {
-    if (!std::holds_alternative<parser::DisjunctionFormula>(o.data)) {
-      return false;
-    }
-
-    formula = std::get<parser::DisjunctionFormula>(std::move(o.data));
-
-    return true;
-  }
+  bool match(parser::FolFormula o);
   std::optional<parser::DisjunctionFormula> formula{};
 };
 
@@ -95,20 +84,7 @@ struct DisjunctionCompoundMatcher {
 };
 
 struct ConjunctionMatcher {
-  bool match(parser::FolFormula o) {
-    DisjunctionMatcher matcher;
-    if (!matcher.match(std::move(o))) {
-      return false;
-    }
-
-    if (!std::holds_alternative<lexer::EPS>(
-            matcher.formula->data.second.data)) {
-      return false;
-    }
-
-    formula = std::move(matcher.formula->data.first);
-    return true;
-  }
+  bool match(parser::FolFormula o);
   std::optional<parser::ConjunctionFormula> formula{};
 };
 
@@ -152,72 +128,13 @@ struct ConjunctionCompoundMatcher {
 };
 
 struct UnaryMatcher {
-  bool match(parser::FolFormula o) {
-    ConjunctionMatcher conj_matcher;
-    if (!conj_matcher.match(std::move(o))) {
-      return false;
-    }
-
-    auto conj = std::move(conj_matcher.formula.value());
-
-    if (!std::holds_alternative<lexer::EPS>(conj.data->second.data)) {
-      return false;
-    }
-
-    formula = std::move(conj.data->first);
-
-    if (check::Brackets(check::Unary())(formula.value())) {
-      return match(
-          std::get<parser::BracketFormula>(std::move(formula->data)).data);
-    }
-
-    return true;
-  }
+  bool match(parser::FolFormula o);
 
   std::optional<parser::UnaryFormula> formula{};
 };
 
 struct BracketsMatcher {
-  bool match(parser::FolFormula o) {
-    if (!std::holds_alternative<parser::DisjunctionFormula>(o.data)) {
-      formula = parser::MakeBrackets(std::move(o));
-      return true;
-    }
-
-    DisjunctionMatcher disj_matcher;
-    if (!disj_matcher.match(std::move(o))) {
-      std::terminate();
-    }
-
-    if (!std::holds_alternative<lexer::EPS>(
-            disj_matcher.formula->data.second.data)) {
-      formula = parser::MakeBrackets({std::move(disj_matcher.formula.value())});
-      return true;
-    }
-
-    ConjunctionMatcher conj_matcher;
-    if (!conj_matcher.match({std::move(disj_matcher.formula.value())})) {
-      std::terminate();
-    }
-
-    auto conj = std::move(conj_matcher.formula.value());
-
-    if (!std::holds_alternative<lexer::EPS>(conj.data->second.data)) {
-      formula = parser::MakeBrackets({parser::MakeDisj(std::move(conj))});
-      return true;
-    }
-
-    auto formula_t = std::move(conj.data->first);
-
-    if (!std::holds_alternative<parser::BracketFormula>(formula_t.data)) {
-      formula = parser::MakeBrackets(std::move(formula_t));
-    } else {
-      return match(std::move(
-          std::get<parser::BracketFormula>(std::move(formula_t.data)).data));
-    }
-
-    return true;
-  }
+  bool match(parser::FolFormula o);
 
   std::optional<parser::BracketFormula> formula{};
 };
@@ -239,21 +156,7 @@ struct BracketsCompoundMatcher {
 };
 
 struct ExistsMatcher {
-  bool match(parser::FolFormula o) {
-    UnaryMatcher unary_matcher;
-    if (!unary_matcher.match(std::move(o))) {
-      return false;
-    }
-
-    auto unary = std::move(unary_matcher.formula.value());
-
-    if (!std::holds_alternative<parser::ExistsFormula>(unary.data)) {
-      return false;
-    }
-
-    formula = std::get<parser::ExistsFormula>(std::move(unary.data));
-    return true;
-  }
+  bool match(parser::FolFormula o);
 
   std::optional<parser::ExistsFormula> formula{};
 };
@@ -274,22 +177,7 @@ struct ExistsCompoundMatcher {
 };
 
 struct NotMatcher {
-  bool match(parser::FolFormula o) {
-    UnaryMatcher unary_matcher;
-    if (!unary_matcher.match(std::move(o))) {
-      return false;
-    }
-
-    auto unary = std::move(unary_matcher.formula.value());
-
-    if (!std::holds_alternative<parser::NotFormula>(unary.data)) {
-      return false;
-    }
-
-    formula = std::get<parser::NotFormula>(std::move(unary.data));
-
-    return true;
-  }
+  bool match(parser::FolFormula o);
 
   std::optional<parser::NotFormula> formula{};
 };
@@ -308,21 +196,7 @@ struct NotCompoundMatcher {
 };
 
 struct ForallMatcher {
-  bool match(parser::FolFormula o) {
-    UnaryMatcher unary_matcher;
-    if (!unary_matcher.match(std::move(o))) {
-      return false;
-    }
-
-    auto unary = std::move(unary_matcher.formula.value());
-
-    if (!std::holds_alternative<parser::ForallFormula>(unary.data)) {
-      return false;
-    }
-
-    formula = std::get<parser::ForallFormula>(std::move(unary.data));
-    return true;
-  }
+  bool match(parser::FolFormula o);
 
   std::optional<parser::ForallFormula> formula{};
 };
@@ -342,40 +216,17 @@ struct ForallCompoundMatcher {
 };
 
 struct PredicateMatcher {
-  bool match(parser::FolFormula o) {
-    UnaryMatcher unary_matcher;
-    if (!unary_matcher.match(std::move(o))) {
-      return false;
-    }
-
-    if (!std::holds_alternative<parser::PredicateFormula>(
-            unary_matcher.formula->data)) {
-      return false;
-    }
-
-    formula = std::move(
-        std::get<parser::PredicateFormula>(unary_matcher.formula->data));
-    return true;
-  }
+  bool match(parser::FolFormula o);
   std::optional<parser::PredicateFormula> formula{};
 };
 
 struct TermMatcher {
-  bool match(parser::TermList term_list) {
-    if (!std::holds_alternative<lexer::EPS>(term_list.data.second.data)) {
-      return false;
-    }
-    term = std::move(term_list.data.first);
-    return true;
-  }
+  bool match(parser::TermList term_list);
   std::optional<parser::Term> term;
 };
 
 struct TermListMatcher {
-  bool match(parser::TermList o) {
-    term_list = std::move(o);
-    return true;
-  }
+  bool match(parser::TermList o);
   std::optional<parser::TermList> term_list;
 };
 
@@ -407,36 +258,12 @@ struct TermListCompoundMatcher<Head> : Anotate<Head, struct HeadLabel> {
 };
 
 struct VariableMatcher {
-  bool match(parser::TermList o) {
-    TermMatcher matcher;
-    if (!matcher.match(std::move(o))) {
-      return false;
-    }
-
-    if (!std::holds_alternative<lexer::Variable>(matcher.term->data)) {
-      return false;
-    }
-
-    formula = std::get<lexer::Variable>(std::move(matcher.term->data));
-    return true;
-  }
+  bool match(parser::TermList o);
   std::optional<lexer::Variable> formula;
 };
 
 struct FunctionMatcher {
-  bool match(parser::TermList o) {
-    TermMatcher matcher;
-    if (!matcher.match(std::move(o))) {
-      return false;
-    }
-
-    if (!std::holds_alternative<parser::FunctionFormula>(matcher.term->data)) {
-      return false;
-    }
-
-    function = std::get<parser::FunctionFormula>(std::move(matcher.term->data));
-    return true;
-  }
+  bool match(parser::TermList o);
   std::optional<parser::FunctionFormula> function;
 };
 
@@ -457,27 +284,12 @@ struct FunctionCompoundMatcher {
 };
 
 struct ConstantMatcher {
-  bool match(parser::TermList o) {
-    TermMatcher matcher;
-    if (!matcher.match(std::move(o))) {
-      return false;
-    }
-
-    if (!std::holds_alternative<lexer::Constant>(matcher.term->data)) {
-      return false;
-    }
-
-    constant = std::get<lexer::Constant>(std::move(matcher.term->data));
-    return true;
-  }
+  bool match(parser::TermList o);
   std::optional<lexer::Constant> constant;
 };
 
 struct NameMatcher {
-  bool match(std::string str) {
-    formula = std::move(str);
-    return true;
-  }
+  bool match(std::string str);
   std::string formula;
 };
 

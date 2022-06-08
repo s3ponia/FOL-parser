@@ -3,6 +3,8 @@
 #include <libfol-basictypes/clause.hpp>
 #include <libfol-basictypes/term.hpp>
 #include <libfol-basictypes/variable.hpp>
+#include <libfol-parser/parser/print.hpp>
+#include <libfol-transform/replace.hpp>
 #include <ostream>
 #include <vector>
 

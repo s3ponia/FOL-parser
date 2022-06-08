@@ -13,8 +13,6 @@ class IClausesStorage {
   virtual void AddClause(const Clause&) = 0;
   virtual bool Contains(const Clause&) const = 0;
   virtual bool empty() const = 0;
-  // true if passed clause is subsumed by set
-  virtual bool Simplify(const Clause&) = 0;
   virtual std::vector<Clause> Infer(const Clause&,
                                     const unification::IUnificator&) const = 0;
 };

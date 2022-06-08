@@ -23,41 +23,17 @@ class ShortPrecedenceClausesStorage : public IClausesStorage {
   template <class T>
   ShortPrecedenceClausesStorage(const T& s) : storage_(s.begin(), s.end()) {}
 
-  std::optional<Clause> NextClause() override {
-    if (storage_.empty()) {
-      return std::nullopt;
-    }
-    auto ret = *storage_.begin();
-    storage_.erase(storage_.begin());
-    return ret;
-  }
+  std::optional<Clause> NextClause() override;
 
   bool Contains(const Clause& c) const override { return storage_.contains(c); }
 
-  void AddClause(const Clause& c) override {
-    if (!Contains(c)) {
-      storage_.insert(c);
-    }
-  }
+  void AddClause(const Clause& c) override;
 
-  bool empty() const override { return storage_.empty(); }
-
-  bool Simplify(const Clause&) override { return false; }
+  bool empty() const override;
 
   std::vector<Clause> Infer(
       const Clause& c,
-      const unification::IUnificator& unificator) const override {
-    std::vector<Clause> res;
-
-    for (auto& c_s : storage_) {
-      auto o_c = unificator.Resolution(c, c_s);
-      if (o_c) {
-        res.push_back(*o_c);
-      }
-    }
-
-    return res;
-  }
+      const unification::IUnificator& unificator) const override;
 
  private:
   StorageType storage_;
