@@ -83,7 +83,6 @@ std::vector<fol::types::Clause> ClausesFromFol(
   auto norm_formula = fol::transform::ToNormalizedFormula(
       fol::transform::Normalize(std::move(formula)));
 
-  norm_formula.Skolemize();
   std::cout << "Normalized and skolemized formula: " << norm_formula
             << std::endl;
   auto disjs = norm_formula.GetDisjunctions();

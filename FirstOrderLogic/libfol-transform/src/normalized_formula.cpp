@@ -7,6 +7,8 @@
 #include <libfol-transform/replace.hpp>
 #include <numeric>
 
+#include "libfol-parser/parser/types.hpp"
+
 namespace fol::transform {
 class NormalizedFormula;
 NormalizedFormula ToNormalizedFormula(fol::parser::FolFormula);
@@ -18,45 +20,24 @@ std::ostream &operator<<(std::ostream &os, NormalizedFormula const &formula) {
        << " " << quantifier.variable << " . ";
   }
 
-  os << fol::parser::ToString(formula.formula_matrix_);
+  os << formula.formula_matrix_;
   return os;
 }
 
-void NormalizedFormula::Skolemize() {
-  std::vector<Quantifier> new_quantifiers;
-  new_quantifiers.reserve(quantifiers_.size());
+parser::FolFormula NormalizedFormula::ToFol() const {
+  parser::FolFormula res = transform::CloneFol(formula_matrix_);
 
-  for (std::vector<Quantifier>::size_type i = 0; i < quantifiers_.size(); ++i) {
-    if (quantifiers_[i].type == Quantifier::Type::Forall) {
-      new_quantifiers.push_back(quantifiers_[i]);
-      continue;
-    }
-
-    if (new_quantifiers.empty()) {
-      auto fun = UniqFunName();
-      std::string new_n_fun = fun + "(cEMPTY)";
-      auto generator = lexer::Tokenize(new_n_fun);
-      auto it = generator.begin();
-      auto new_n_fun_t = parser::ParseTerm(it);
-      transform::ReplaceTermVar(formula_matrix_, quantifiers_[i].variable,
-                                new_n_fun_t);
+  for (auto &quantifier : quantifiers_) {
+    if (quantifier.type == Quantifier::Type::Exists) {
+      res = parser::ToFol(
+          parser::MakeExists(quantifier.variable, std::move(res)));
     } else {
-      std::string new_n_fun =
-          std::accumulate(new_quantifiers.begin() + 1, new_quantifiers.end(),
-                          UniqFunName() + "(" + new_quantifiers[0].variable,
-                          [](auto &&lhs, auto &&rhs) {
-                            return lhs + ", " + rhs.variable;
-                          }) +
-          ")";
-      auto generator = lexer::Tokenize(new_n_fun);
-      auto it = generator.begin();
-      auto new_n_fun_t = parser::ParseTerm(it);
-      transform::ReplaceTermVar(formula_matrix_, quantifiers_[i].variable,
-                                new_n_fun_t);
+      res = parser::ToFol(
+          parser::MakeForall(quantifier.variable, std::move(res)));
     }
   }
 
-  quantifiers_ = std::move(new_quantifiers);
+  return res;
 }
 
 std::vector<parser::FolFormula> NormalizedFormula::GetDisjunctions() const {

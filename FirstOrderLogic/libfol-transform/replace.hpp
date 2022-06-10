@@ -48,6 +48,12 @@ inline parser::Term CloneTerm(T&& src) {
 }
 
 template <class T>
+inline parser::FolFormula CloneFol(T&& src) {
+  auto str = parser::ToString(std::forward<T>(src));
+  return parser::Parse(lexer::Tokenize(str));
+}
+
+template <class T>
 inline parser::FolFormula ReplaceWithConst(T&& src, std::string what) {
   auto str = parser::ToString(std::forward<T>(src));
   ++cnt;
@@ -182,6 +188,11 @@ inline void ReplaceTermVar(auto& where, const std::string& from,
   lexer::Variable var;
   var.base() = from;
   ReplaceTerm(where, parser::Term{var}, to);
+}
+
+inline std::string UniqFunName() {
+  static int cnt = 0;
+  return "funiq" + std::to_string(cnt++);
 }
 
 inline parser::FolFormula RenameVar(parser::FolFormula src, std::string what,

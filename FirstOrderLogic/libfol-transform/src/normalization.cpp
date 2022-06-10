@@ -1,4 +1,6 @@
 #include <libfol-transform/normalization.hpp>
+#include <libfol-transform/normalized_formula.hpp>
+#include <numeric>
 
 namespace fol::transform {
 parser::FolFormula Normalize(parser::FolFormula formula);
@@ -325,7 +327,7 @@ parser::ImplicationFormula QuantifiersToCNF6(
         forall_f.value().data.first, std::move(inner_forall))))};
   }
 
-  // (? vx . F[vx]) and (@ vx . H[vx]) = ? ucc . @ uc . F[ucc] and H[uc]
+  // (? vx . F[vx]) and (@ vx . H[vx]) = ? uc . @ uc . F[ucc] and H[uc]
   if (matcher::check::Conj(matcher::check::Exists(),
                            matcher::check::Forall())(formula)) {
     std::optional<parser::ExistsFormula> forall_f;
@@ -347,7 +349,7 @@ parser::ImplicationFormula QuantifiersToCNF6(
                                             std::move(inner_forall)));
   }
 
-  // (@ vx . F[vx]) and (? vx . H[vx]) = @ vx . ? uc . F[vx] and H[uc]
+  // (@ vx . F[vx]) and (? vx . H[vx]) = ? uc . @ vx . F[vx] and H[uc]
   if (matcher::check::Conj(matcher::check::Forall(),
                            matcher::check::Exists())(formula)) {
     std::optional<parser::ForallFormula> forall_f;
@@ -437,7 +439,7 @@ parser::ImplicationFormula QuantifiersToCNF5(
         forall_f.value().data.first, std::move(inner_forall))))};
   }
 
-  // (@ vx . F[vx]) or (? vx . H[vx]) = @ vx . ? uc . F[vx] or H[uc]
+  // (@ vx . F[vx]) or (? vx . H[vx]) = ? uc . @ vx . F[vx] or H[uc]
   if (matcher::check::Disj(matcher::check::Forall(),
                            matcher::check::Exists())(formula)) {
     std::optional<parser::ForallFormula> forall_f;
@@ -450,12 +452,12 @@ parser::ImplicationFormula QuantifiersToCNF5(
 
     parser::ImplicationFormula inner_forall = {
         parser::MakeDisj(parser::MakeConj(
-            parser::MakeExists(exists_h.value().data.first,
+            parser::MakeForall(forall_f.value().data.first,
                                {!std::move(forall_f.value().data.second) ||
                                 !std::move(exists_h.value().data.second)})))};
 
-    return {parser::MakeDisj(parser::MakeConj(parser::MakeForall(
-        forall_f.value().data.first, std::move(inner_forall))))};
+    return {parser::MakeDisj(parser::MakeConj(parser::MakeExists(
+        exists_h.value().data.first, std::move(inner_forall))))};
   }
 
   // (@ vx . F[vx]) or (@ vx . H[vx]) = @ vx . @ uc . F[vx] or H[uc]
@@ -1051,11 +1053,122 @@ parser::FolFormula ToCNF(parser::FolFormula formula) {
   return DeleteUselessBrackets(ToConjunctionNormalForm(std::move(formula)));
 }
 
+struct Quantifier {
+  enum TYPE { FORALL = 0, EXISTS = 1 };
+
+  TYPE type;
+  std::string var;
+};
+
+parser::FolFormula Skolemize(
+    parser::FolFormula formula,
+    std::vector<std::pair<Quantifier, std::string>> prev = {}) {
+  formula = DeleteUselessBrackets(std::move(formula));
+
+  if (matcher::check::Forall()(formula)) {
+    std::optional<parser::ForallFormula> forall_f;
+    matcher::RefForall(forall_f).match(std::move(formula));
+    prev.push_back({Quantifier{Quantifier::FORALL, forall_f.value().data.first},
+                    UniqFunName()});
+    return Skolemize(std::move(forall_f.value().data.second), std::move(prev));
+  }
+
+  if (matcher::check::Exists()(formula)) {
+    std::optional<parser::ExistsFormula> forall_f;
+    matcher::RefExists(forall_f).match(std::move(formula));
+    prev.push_back({Quantifier{Quantifier::EXISTS, forall_f.value().data.first},
+                    UniqFunName()});
+    return Skolemize(std::move(forall_f.value().data.second), std::move(prev));
+  }
+
+  auto wrap_wrap_quant_create = [](auto &&is_forall, auto &&var) {
+    return [=](auto f) -> parser::FolFormula {
+      if (is_forall) {
+        return parser::ToFol(parser::MakeForall(var, std::move(f)));
+      } else {
+        return parser::ToFol(parser::MakeExists(var, std::move(f)));
+      }
+    };
+  };
+
+  auto wrap_quant_prev =
+      [&prev, &wrap_wrap_quant_create](auto f) -> parser::FolFormula {
+    std::vector<Quantifier> new_quantifiers;
+    new_quantifiers.reserve(prev.size());
+    for (auto it = prev.begin(); it != prev.end(); ++it) {
+      if (it->first.type == Quantifier::FORALL) {
+        new_quantifiers.push_back(it->first);
+        continue;
+      }
+
+      if (new_quantifiers.empty()) {
+        auto fun = it->second;
+        std::string new_n_fun = fun + "(cEMPTY)";
+        auto generator = lexer::Tokenize(new_n_fun);
+        auto gen_it = generator.begin();
+        auto new_n_fun_t = parser::ParseTerm(gen_it);
+        transform::ReplaceTermVar(f, it->first.var, new_n_fun_t);
+      } else {
+        std::string new_n_fun =
+            std::accumulate(
+                new_quantifiers.begin() + 1, new_quantifiers.end(),
+                it->second + "(" + new_quantifiers[0].var,
+                [](auto &&lhs, auto &&rhs) { return lhs + ", " + rhs.var; }) +
+            ")";
+        auto generator = lexer::Tokenize(new_n_fun);
+        auto gen_it = generator.begin();
+        auto new_n_fun_t = parser::ParseTerm(gen_it);
+        transform::ReplaceTermVar(f, it->first.var, new_n_fun_t);
+      }
+    }
+
+    for (auto it = new_quantifiers.rbegin(); it != new_quantifiers.rend();
+         ++it) {
+      auto wrap =
+          wrap_wrap_quant_create(it->type == Quantifier::FORALL, it->var);
+      f = wrap(std::move(f));
+    }
+
+    return f;
+  };
+
+  if (matcher::check::Conj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::FolFormula> lhs;
+    std::optional<parser::FolFormula> rhs;
+    matcher::Conj(matcher::RefImpl(lhs), matcher::RefImpl(rhs))
+        .match(std::move(formula));
+
+    return parser::ToFol(!Skolemize(std::move(*lhs), prev) &&
+                         !Skolemize(std::move(*rhs), prev));
+  }
+
+  if (matcher::check::Disj(matcher::check::Anything(),
+                           matcher::check::Anything())(formula)) {
+    std::optional<parser::FolFormula> lhs;
+    std::optional<parser::FolFormula> rhs;
+    matcher::Disj(matcher::RefImpl(lhs), matcher::RefImpl(rhs))
+        .match(std::move(formula));
+
+    return parser::ToFol(!Skolemize(std::move(*lhs), prev) ||
+                         !Skolemize(std::move(*rhs), prev));
+  }
+
+  return wrap_quant_prev(std::move(formula));
+}
+
 parser::FolFormula Normalize(parser::FolFormula formula) {
+  std::cout << "Normalize: " << formula << std::endl;
   formula = RemoveImplication(std::move(formula));
+  std::cout << "Remove impl: " << formula << std::endl;
   formula = MoveNegInner(std::move(formula));
+  std::cout << "Move neg inner: " << formula << std::endl;
+  formula = Skolemize(std::move(formula));
+  std::cout << "Skolemize: " << formula << std::endl;
   formula = NormalizeQuantifiers(std::move(formula));
+  std::cout << "Normalize quantifiers: " << formula << std::endl;
   formula = ToCNF(std::move(formula));
+  std::cout << "To CNF: " << formula << std::endl;
   return formula;
 }
 
