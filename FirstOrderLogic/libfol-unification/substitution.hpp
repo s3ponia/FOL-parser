@@ -60,14 +60,7 @@ class Substitution {
     for (auto&& sub_pair : substitute_pairs_) {
       auto&& from = sub_pair.from;
       auto&& to = sub_pair.to;
-      if (term.IsVar() && term.Var() == from) {
-        term = transform::ReplaceTerm(term, from, parser::ToString(to));
-      } else {
-        term = transform::ReplaceTerm(term, from + ",",
-                                      parser::ToString(to) + ",");
-        term = transform::ReplaceTerm(term, from + ")",
-                                      parser::ToString(to) + ")");
-      }
+      transform::ReplaceTermVar(term, from, to);
     }
   }
 
@@ -90,7 +83,7 @@ class Substitution {
     std::vector<SubstitutePair> res;
     res.reserve(substitute_pairs_.size());
     for (auto& s_p : substitute_pairs_) {
-      if (s_p.from != parser::ToString(s_p.to)) {
+      if (!(s_p.to.IsVar() && s_p.from == s_p.to.Var())) {
         res.push_back(s_p);
       }
     }

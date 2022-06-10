@@ -6,6 +6,6 @@ namespace fol::types {
 class ShortPrecedenceClausesStorageFactory : public IClausesStorageFactory {
  public:
   std::pair<std::unique_ptr<IClausesStorage>, std::unique_ptr<IClausesStorage>>
-  create(std::vector<Clause> axioms, std::vector<Clause> hypothesis) override;
+  create(std::vector<Clause> axioms, std::vector<Clause> hypothesis);
 };
 }  // namespace fol::types

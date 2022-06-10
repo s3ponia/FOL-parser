@@ -5,7 +5,6 @@ namespace fol::unification {
 namespace {
 MartelliMontanariUnificator::Result ApplyRules(
     MartelliMontanariUnificator::EqualitiesType& equalities) {
-  using types::operator==;
   for (auto eq_it = equalities.begin(); eq_it != equalities.end(); ++eq_it) {
     auto& eq = *eq_it;
     // RULE 1

@@ -26,6 +26,10 @@ class BasicClausesStorage : public IClausesStorage {
 
   void AddClause(const Clause& c) override;
 
+  auto begin() const { return storage_.begin(); }
+
+  auto end() const { return storage_.end(); }
+
   bool empty() const override { return storage_.empty(); }
 
   std::vector<Clause> Infer(

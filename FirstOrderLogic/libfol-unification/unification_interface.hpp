@@ -62,7 +62,6 @@ class IUnificator {
       }
     }
 
-    std::cout << rhs << " is part of " << lhs << std::endl;
     return true;
   }
 
@@ -91,7 +90,6 @@ class IUnificator {
 
           std::cout << "Resolution: " << lhs << " RESOLVE " << rhs << " >>> "
                     << cpy_lhs << std::endl;
-          std::cout << "Sub: " << *sub << std::endl;
 
           cpy_lhs.ClearAncestors();
           cpy_lhs.GenerateId();

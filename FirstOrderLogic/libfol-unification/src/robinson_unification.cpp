@@ -4,8 +4,6 @@ namespace fol::unification {
 namespace {
 std::optional<Substitution> UnificateFunction(const types::Function& lhs,
                                               const types::Function& rhs) {
-  using fol::types::operator==;
-
   if (lhs.function_name() != rhs.function_name()) {
     return std::nullopt;
   }
@@ -64,18 +62,21 @@ std::optional<Substitution> UnificateFunction(const types::Function& lhs,
 
 std::optional<Substitution> RobinsonUnificator::Unificate(
     const types::Atom& lhs, const types::Atom& rhs) const {
-  using fol::types::operator==;
-
   if (lhs.predicate_name() != rhs.predicate_name() ||
       lhs.terms().size() != rhs.terms().size()) {
     return std::nullopt;
   }
 
   Substitution res;
+  auto lhs_cl = lhs;
+  auto rhs_cl = rhs;
 
   for (std::size_t i = 0; i < lhs.terms().size(); ++i) {
     auto t1_cp = types::Clone(lhs.terms()[i]);
     auto t2_cp = types::Clone(rhs.terms()[i]);
+
+    // auto& t1_cp = lhs_cl[i];
+    // auto& t2_cp = rhs_cl[i];
     res.Substitute(t1_cp);
     res.Substitute(t2_cp);
 

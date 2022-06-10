@@ -49,19 +49,14 @@ Atom::Atom(parser::FolFormula formula) {
 
 void Atom::Substitute(const Variable& from, const Term& to) {
   for (auto& term : term_list_) {
-    if (term.IsVar() && term.Var() == from) {
-      term = transform::ReplaceTerm(term, from, parser::ToString(to));
-    } else {
-      term =
-          transform::ReplaceTerm(term, from + ",", parser::ToString(to) + ",");
-      term =
-          transform::ReplaceTerm(term, from + ")", parser::ToString(to) + ")");
-    }
+    transform::ReplaceTermVar(term, from, to);
   }
 }
 
 bool Atom::operator==(const Atom& o) const {
-  return parser::ToString(*this) == parser::ToString(o);
+  return negative_ == o.negative_ && predicate_name_ == o.predicate_name_ &&
+         term_list_.size() == o.term_list_.size() &&
+         std::equal(term_list_.begin(), term_list_.end(), o.term_list_.begin());
 }
 
 bool Atom::operator<(const Atom& o) const {

@@ -34,12 +34,12 @@ void NormalizedFormula::Skolemize() {
 
     if (new_quantifiers.empty()) {
       auto fun = UniqFunName();
-      formula_matrix_ =
-          Replace(std::move(formula_matrix_), quantifiers_[i].variable + ",",
-                  fun + "(cEMPTY),");
-      formula_matrix_ =
-          Replace(std::move(formula_matrix_), quantifiers_[i].variable + ")",
-                  fun + "(cEMPTY))");
+      std::string new_n_fun = fun + "(cEMPTY)";
+      auto generator = lexer::Tokenize(new_n_fun);
+      auto it = generator.begin();
+      auto new_n_fun_t = parser::ParseTerm(it);
+      transform::ReplaceTermVar(formula_matrix_, quantifiers_[i].variable,
+                                new_n_fun_t);
     } else {
       std::string new_n_fun =
           std::accumulate(new_quantifiers.begin() + 1, new_quantifiers.end(),
@@ -48,12 +48,11 @@ void NormalizedFormula::Skolemize() {
                             return lhs + ", " + rhs.variable;
                           }) +
           ")";
-      formula_matrix_ =
-          Replace(std::move(formula_matrix_), quantifiers_[i].variable + ",",
-                  new_n_fun + ",");
-      formula_matrix_ =
-          Replace(std::move(formula_matrix_), quantifiers_[i].variable + ")",
-                  new_n_fun + ")");
+      auto generator = lexer::Tokenize(new_n_fun);
+      auto it = generator.begin();
+      auto new_n_fun_t = parser::ParseTerm(it);
+      transform::ReplaceTermVar(formula_matrix_, quantifiers_[i].variable,
+                                new_n_fun_t);
     }
   }
 

@@ -26,6 +26,8 @@ struct FunctionFormula {
   std::unique_ptr<std::pair<lexer::Function, TermList>> data;
 };
 
+bool operator==(const FunctionFormula& lhs, const FunctionFormula& rhs);
+
 struct Term {
   Term() = default;
   Term(lexer::Constant c) : data(c) {}
@@ -46,19 +48,34 @@ struct Term {
   std::variant<lexer::Constant, lexer::Variable, FunctionFormula> data;
 };
 
+bool operator==(const Term& lhs, const Term& rhs);
+
 namespace literals {
-Term operator""_t(const char* str, std::size_t);
+inline Term operator""_t(const char* str, std::size_t) {
+  switch (str[0]) {
+    case 'c':
+      return {lexer::Constant{str}};
+    case 'v':
+      return {lexer::Variable{str}};
+    default:
+      throw std::runtime_error{"Unhandled variant in literal _p"};
+  }
+}
 }  // namespace literals
 
 struct TermListPrime {
   std::variant<std::unique_ptr<TermList>, lexer::EPS> data;
 };
 
+bool operator==(const TermListPrime& lhs, const TermListPrime& rhs);
+
 struct TermList {
   TermList(Term t, TermListPrime term_list_prime = TermListPrime{lexer::EPS{}})
       : data{std::move(t), std::move(term_list_prime)} {}
   std::pair<Term, TermListPrime> data;
 };
+
+bool operator==(const TermList& lhs, const TermList& rhs);
 
 struct ConjunctionPrimeFormula {
   std::variant<
@@ -67,9 +84,14 @@ struct ConjunctionPrimeFormula {
       data;
 };
 
+bool operator==(const ConjunctionPrimeFormula& lhs,
+                const ConjunctionPrimeFormula& rhs);
+
 struct ConjunctionFormula {
   std::unique_ptr<std::pair<UnaryFormula, ConjunctionPrimeFormula>> data;
 };
+
+bool operator==(const ConjunctionFormula& lhs, const ConjunctionFormula& rhs);
 
 struct DisjunctionPrimeFormula {
   std::variant<
@@ -77,6 +99,9 @@ struct DisjunctionPrimeFormula {
       lexer::EPS>
       data;
 };
+
+bool operator==(const DisjunctionPrimeFormula& lhs,
+                const DisjunctionPrimeFormula& rhs);
 
 struct DisjunctionFormula {
   DisjunctionFormula(ConjunctionFormula c_formula,
@@ -90,6 +115,8 @@ struct DisjunctionFormula {
   std::pair<ConjunctionFormula, DisjunctionPrimeFormula> data;
 };
 
+bool operator==(const DisjunctionFormula& lhs, const DisjunctionFormula& rhs);
+
 struct ImplicationFormula {
   std::variant<
       DisjunctionFormula,
@@ -97,25 +124,37 @@ struct ImplicationFormula {
       data;
 };
 
+bool operator==(const ImplicationFormula& lhs, const ImplicationFormula& rhs);
+
 struct BracketFormula {
   ImplicationFormula data;
 };
+
+bool operator==(const BracketFormula& lhs, const BracketFormula& rhs);
 
 struct NotFormula {
   std::unique_ptr<UnaryFormula> data;
 };
 
+bool operator==(const NotFormula& lhs, const NotFormula& rhs);
+
 struct ForallFormula {
   std::pair<std::string, ImplicationFormula> data;
 };
+
+bool operator==(const ForallFormula& lhs, const ForallFormula& rhs);
 
 struct ExistsFormula {
   std::pair<std::string, ImplicationFormula> data;
 };
 
+bool operator==(const ExistsFormula& lhs, const ExistsFormula& rhs);
+
 struct PredicateFormula {
   std::pair<lexer::Predicate, TermList> data;
 };
+
+bool operator==(const PredicateFormula& lhs, const PredicateFormula& rhs);
 
 struct UnaryFormula {
   template <typename T>
@@ -135,6 +174,8 @@ struct UnaryFormula {
                PredicateFormula>
       data;
 };
+
+bool operator==(const UnaryFormula& lhs, const UnaryFormula& rhs);
 
 BracketFormula MakeBrackets(parser::ImplicationFormula impl);
 

@@ -29,6 +29,10 @@ class ShortPrecedenceClausesStorage : public IClausesStorage {
 
   void AddClause(const Clause& c) override;
 
+  auto begin() const { return storage_.begin(); }
+
+  auto end() const { return storage_.end(); }
+
   bool empty() const override;
 
   std::vector<Clause> Infer(

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <libfol-basictypes/term.hpp>
 #include <libfol-parser/lexer/lexer.hpp>
 #include <libfol-parser/parser/parser.hpp>
 #include <libfol-parser/parser/print.hpp>
@@ -47,15 +48,6 @@ inline parser::Term CloneTerm(T&& src) {
 }
 
 template <class T>
-inline parser::Term ReplaceTerm(T&& src, std::string what, std::string with) {
-  auto str = parser::ToString(std::forward<T>(src));
-  ReplaceAll(str, what, with);
-  auto generator = lexer::Tokenize(str);
-  auto it = generator.begin();
-  return parser::ParseTerm(it);
-}
-
-template <class T>
 inline parser::FolFormula ReplaceWithConst(T&& src, std::string what) {
   auto str = parser::ToString(std::forward<T>(src));
   ++cnt;
@@ -78,6 +70,118 @@ inline parser::FolFormula Replace(T&& src, std::string what, std::string with) {
   auto str = parser::ToString(std::forward<T>(src));
   ReplaceAll(str, what, with);
   return parser::Parse(lexer::Tokenize(str));
+}
+
+inline void ReplaceTerm(parser::ImplicationFormula& where,
+                        const parser::Term& from, const parser::Term& to);
+inline void ReplaceTerm(parser::UnaryFormula& where, const parser::Term& from,
+                        const parser::Term& to);
+inline void ReplaceTerm(parser::Term& where, const parser::Term& from,
+                        const parser::Term& to);
+
+inline void ReplaceTerm(parser::PredicateFormula& where,
+                        const parser::Term& from, const parser::Term& to) {
+  for (auto it = parser::TermListIt{&where.data.second};
+       it != parser::TermListIt{}; ++it) {
+    ReplaceTerm(*it, from, to);
+  }
+}
+
+inline void ReplaceTerm(parser::ExistsFormula& where, const parser::Term& from,
+                        const parser::Term& to) {
+  ReplaceTerm(where.data.second, from, to);
+}
+
+inline void ReplaceTerm(parser::ForallFormula& where, const parser::Term& from,
+                        const parser::Term& to) {
+  ReplaceTerm(where.data.second, from, to);
+}
+
+inline void ReplaceTerm(parser::NotFormula& where, const parser::Term& from,
+                        const parser::Term& to) {
+  ReplaceTerm(*where.data, from, to);
+}
+
+inline void ReplaceTerm(parser::BracketFormula& where, const parser::Term& from,
+                        const parser::Term& to) {
+  ReplaceTerm(where.data, from, to);
+}
+
+inline void ReplaceTerm(parser::UnaryFormula& where, const parser::Term& from,
+                        const parser::Term& to) {
+  std::visit([&](auto&& a) { ReplaceTerm(a, from, to); }, where.data);
+}
+
+inline void ReplaceTerm(parser::ConjunctionPrimeFormula& where,
+                        const parser::Term& from, const parser::Term& to) {
+  std::visit(
+      [&](auto&& a) {
+        if constexpr (details::utils::Dereferencable<decltype(a)>) {
+          ReplaceTerm(a->first, from, to);
+          ReplaceTerm(a->second, from, to);
+        }
+      },
+      where.data);
+}
+
+inline void ReplaceTerm(parser::ConjunctionFormula& where,
+                        const parser::Term& from, const parser::Term& to) {
+  ReplaceTerm(where.data->first, from, to);
+  ReplaceTerm(where.data->second, from, to);
+}
+
+inline void ReplaceTerm(parser::DisjunctionPrimeFormula& where,
+                        const parser::Term& from, const parser::Term& to) {
+  std::visit(
+      [&](auto&& a) {
+        if constexpr (details::utils::Dereferencable<decltype(a)>) {
+          ReplaceTerm(a->first, from, to);
+          ReplaceTerm(a->second, from, to);
+        }
+      },
+      where.data);
+}
+
+inline void ReplaceTerm(parser::DisjunctionFormula& where,
+                        const parser::Term& from, const parser::Term& to) {
+  ReplaceTerm(where.data.first, from, to);
+  ReplaceTerm(where.data.second, from, to);
+}
+
+inline void ReplaceTerm(parser::FolFormula& where, const parser::Term& from,
+                        const parser::Term& to) {
+  std::visit(
+      [&](auto&& a) {
+        if constexpr (details::utils::Dereferencable<decltype(a)>) {
+          ReplaceTerm(a->first, from, to);
+          ReplaceTerm(a->second, from, to);
+        } else {
+          ReplaceTerm(a, from, to);
+        }
+      },
+      where.data);
+}
+
+inline void ReplaceTerm(parser::Term& where, const parser::Term& from,
+                        const parser::Term& to) {
+  if (where == from) {
+    where = types::Clone(to);
+    return;
+  }
+
+  if (where.IsFunction()) {
+    for (auto it = parser::FunctionTermsIt(where.Function());
+         it != parser::TermListIt{}; ++it) {
+      ReplaceTerm(*it, from, to);
+    }
+  }
+}
+
+inline void ReplaceTermVar(auto& where, const std::string& from,
+                           const parser::Term& to) {
+  lexer::Variable var;
+  var.base() = from;
+  ReplaceTerm(where, parser::Term{var}, to);
 }
 
 inline parser::FolFormula RenameVar(parser::FolFormula src, std::string what,

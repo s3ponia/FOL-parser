@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <libfol-basictypes/basic_clauses_storage.hpp>
@@ -13,11 +14,8 @@
 #include <libfol-prover/prover.hpp>
 #include <libfol-transform/normalization.hpp>
 #include <libfol-transform/normalized_formula.hpp>
-#include <libfol-unification/here_unification.hpp>
 #include <libfol-unification/here_unification_factory.hpp>
-#include <libfol-unification/martelli_montanari_unification.hpp>
 #include <libfol-unification/martelli_montanari_unification_factory.hpp>
-#include <libfol-unification/robinson_unification.hpp>
 #include <libfol-unification/robinson_unification_factory.hpp>
 #include <map>
 #include <memory>
@@ -85,8 +83,9 @@ std::vector<fol::types::Clause> ClausesFromFol(
   auto norm_formula = fol::transform::ToNormalizedFormula(
       fol::transform::Normalize(std::move(formula)));
 
-  std::cout << norm_formula << std::endl;
   norm_formula.Skolemize();
+  std::cout << "Normalized and skolemized formula: " << norm_formula
+            << std::endl;
   auto disjs = norm_formula.GetDisjunctions();
   res.reserve(disjs.size());
 
@@ -122,6 +121,9 @@ void PrintProof(const fol::types::Clause& clause) {
     }
     std::cout << "]\n";
   }
+
+  std::cout << "Proof size: " << map.size() << std::endl;
+  std::cout << "Useless clauses: " << clause.id() - map.size() << std::endl;
 }
 
 int main() {
@@ -141,14 +143,21 @@ int main() {
                "[1] Saturation policy\n"
                "[2] Short precedence policy\n"
                "[3] Strikeout policy\n"
-               "[4] Support policy\n";
+               "[4] Support policy\n"
+               "[5] Strikeout + Short precedence policy\n"
+               "[6] Support + Short precedence policy\n";
   std::shared_ptr<fol::types::IClausesStorageFactory>
       clauses_storage_factories[]{
           std::make_shared<fol::types::BasicClausesStorageFactory>(),
           std::make_shared<fol::types::ShortPrecedenceClausesStorageFactory>(),
-          std::make_shared<fol::types::StrikeoutClausesStorageFactory>(
-              unification_factory),
-          std::make_shared<fol::types::SupportClausesStorageFactory>()};
+          std::make_shared<fol::types::StrikeoutClausesStorageFactory<
+              fol::types::BasicClausesStorage>>(unification_factory),
+          std::make_shared<fol::types::SupportClausesStorageFactory<
+              fol::types::BasicClausesStorage>>(),
+          std::make_shared<fol::types::StrikeoutClausesStorageFactory<
+              fol::types::ShortPrecedenceClausesStorage>>(unification_factory),
+          std::make_shared<fol::types::SupportClausesStorageFactory<
+              fol::types::ShortPrecedenceClausesStorage>>()};
   auto clauses_storage_factory =
       std::move(clauses_storage_factories[input<int>(std::cin) - 1]);
 
@@ -193,11 +202,16 @@ int main() {
                                     std::move(clauses_storages.first),
                                     std::move(clauses_storages.second));
 
+  auto start = std::chrono::steady_clock::now();
   auto res = prover.Prove();
+  auto end = std::chrono::steady_clock::now();
 
   if (res) {
     PrintProof(*res);
   } else {
     std::cout << "No proof" << std::endl;
   }
+
+  std::chrono::duration<double> elapsed_seconds = end - start;
+  std::cout << "Elapsed time: " << 1000 * elapsed_seconds.count() << "ms\n";
 }

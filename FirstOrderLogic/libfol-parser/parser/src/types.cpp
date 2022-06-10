@@ -1,31 +1,138 @@
 #include <libfol-parser/parser/types.hpp>
 
 namespace fol::parser {
-struct ImplicationFormula;
-struct DisjunctionFormula;
-struct DisjunctionPrimeFormula;
-struct ConjunctionFormula;
-struct ConjunctionPrimeFormula;
-struct UnaryFormula;
-struct PredicateFormula;
-struct FunctionFormula;
-struct Term;
-struct TermList;
-
-using FolFormula = ImplicationFormula;
-
-namespace literals {
-Term operator""_t(const char* str, std::size_t) {
-  switch (str[0]) {
-    case 'c':
-      return {lexer::Constant{str}};
-    case 'v':
-      return {lexer::Variable{str}};
-    default:
-      throw std::runtime_error{"Unhandled variant in literal _p"};
-  }
+bool operator==(const FunctionFormula& lhs, const FunctionFormula& rhs) {
+  return lhs.data->first.base() == rhs.data->first.base() &&
+         lhs.data->second == rhs.data->second;
 }
-}  // namespace literals
+
+bool operator==(const Term& lhs, const Term& rhs) {
+  return std::visit(
+      [](auto&& lhs_a, auto&& rhs_a) {
+        if constexpr (std::is_same_v<decltype(lhs_a), decltype(rhs_a)>) {
+          return lhs_a == rhs_a;
+        } else {
+          return false;
+        }
+      },
+      lhs.data, rhs.data);
+}
+
+bool operator==(const TermListPrime& lhs, const TermListPrime& rhs) {
+  return std::visit(
+      [](auto&& lhs_a, auto&& rhs_a) {
+        if constexpr (std::is_same_v<decltype(lhs_a), decltype(rhs_a)>) {
+          if constexpr (std::is_same_v<std::decay_t<decltype(lhs_a)>,
+                                       std::unique_ptr<TermList>>) {
+            return *lhs_a == *rhs_a;
+          } else {
+            return true;
+          }
+        } else {
+          return false;
+        }
+      },
+      lhs.data, rhs.data);
+}
+
+bool operator==(const TermList& lhs, const TermList& rhs) {
+  return lhs.data.first == rhs.data.first && rhs.data.second == rhs.data.second;
+}
+
+bool operator==(const ConjunctionPrimeFormula& lhs,
+                const ConjunctionPrimeFormula& rhs) {
+  return std::visit(
+      [](auto&& lhs_a, auto&& rhs_a) {
+        if constexpr (std::is_same_v<decltype(lhs_a), decltype(rhs_a)>) {
+          if constexpr (!std::is_same_v<std::decay_t<decltype(lhs_a)>,
+                                        lexer::EPS>) {
+            return *lhs_a == *rhs_a;
+          } else {
+            return true;
+          }
+        } else {
+          return false;
+        }
+      },
+      lhs.data, rhs.data);
+}
+
+bool operator==(const DisjunctionPrimeFormula& lhs,
+                const DisjunctionPrimeFormula& rhs) {
+  return std::visit(
+      [](auto&& lhs_a, auto&& rhs_a) {
+        if constexpr (std::is_same_v<decltype(lhs_a), decltype(rhs_a)>) {
+          if constexpr (!std::is_same_v<std::decay_t<decltype(lhs_a)>,
+                                        lexer::EPS>) {
+            return *lhs_a == *rhs_a;
+          } else {
+            return true;
+          }
+        } else {
+          return false;
+        }
+      },
+      lhs.data, rhs.data);
+}
+
+bool operator==(const ConjunctionFormula& lhs, const ConjunctionFormula& rhs) {
+  return *lhs.data == *rhs.data;
+}
+
+bool operator==(const DisjunctionFormula& lhs, const DisjunctionFormula& rhs) {
+  return lhs.data == rhs.data;
+}
+
+bool operator==(const ImplicationFormula& lhs, const ImplicationFormula& rhs) {
+  return std::visit(
+      [](auto&& lhs_a, auto&& rhs_a) {
+        if constexpr (std::is_same_v<decltype(lhs_a), decltype(rhs_a)>) {
+          if constexpr (std::is_same_v<
+                            std::decay_t<decltype(lhs_a)>,
+                            std::unique_ptr<std::pair<DisjunctionFormula,
+                                                      ImplicationFormula>>>) {
+            return *lhs_a == *rhs_a;
+          } else {
+            return lhs_a == rhs_a;
+          }
+        } else {
+          return false;
+        }
+      },
+      lhs.data, rhs.data);
+}
+
+bool operator==(const BracketFormula& lhs, const BracketFormula& rhs) {
+  return lhs.data == rhs.data;
+}
+
+bool operator==(const NotFormula& lhs, const NotFormula& rhs) {
+  return lhs.data == rhs.data;
+}
+
+bool operator==(const ForallFormula& lhs, const ForallFormula& rhs) {
+  return lhs.data == rhs.data;
+}
+
+bool operator==(const ExistsFormula& lhs, const ExistsFormula& rhs) {
+  return rhs.data == lhs.data;
+}
+
+bool operator==(const PredicateFormula& lhs, const PredicateFormula& rhs) {
+  return lhs.data == rhs.data;
+}
+
+bool operator==(const UnaryFormula& lhs, const UnaryFormula& rhs) {
+  return std::visit(
+      [](auto&& lhs_a, auto&& rhs_a) {
+        if constexpr (std::is_same_v<decltype(lhs_a), decltype(rhs_a)>) {
+          return lhs_a == rhs_a;
+        } else {
+          return false;
+        }
+      },
+      lhs.data, rhs.data);
+}
 
 BracketFormula MakeBrackets(parser::ImplicationFormula impl) {
   return BracketFormula{std::move(impl)};

@@ -53,7 +53,6 @@ void VarHere(types::Term& var, types::Term& term, MapType& map, VarSet& vars) {
         auto* w = path2.front();
         path2.pop_front();
 
-        using types::operator==;
         if (*v == *w) {
           Collapse(path.begin(), path.end(), *v, map);
           Collapse(path2.begin(), path2.end(), *v, map);
@@ -81,7 +80,6 @@ void RecurHere(types::Term& v, types::Term& y, types::Term& t, MapType& map,
 }
 
 void Here(types::Term& lhs, types::Term& rhs, MapType& map, VarSet& vars) {
-  using types::operator==;
   if (lhs != rhs && !lhs.IsConstant() && !rhs.IsConstant()) {
     if (lhs.IsVar()) {
       VarHere(lhs, rhs, map, vars);
@@ -204,7 +202,9 @@ Substitution SubstitutionFromMap(MapType& map, VarSet& vars) {
   SubstitutionMap s;
 
   for (auto& v : vars) {
-    Vere(*v, map, s);
+    if (v->IsVar()) {
+      Vere(*v, map, s);
+    }
   }
   std::vector<Substitution::SubstitutePair> pairs;
   pairs.reserve(s.size());

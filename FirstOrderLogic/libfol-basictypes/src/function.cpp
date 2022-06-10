@@ -26,7 +26,9 @@ void Function::swap(Function& o) {
 }
 
 bool Function::operator==(const Function& o) const {
-  return parser::ToString(*this) == parser::ToString(o);
+  return function_name_ == o.function_name_ &&
+         term_list_.size() == o.term_list_.size() &&
+         std::equal(term_list_.begin(), term_list_.end(), o.term_list_.begin());
 }
 
 bool Function::operator<(const Function& o) const {
@@ -35,8 +37,7 @@ bool Function::operator<(const Function& o) const {
 
 void Function::Substitute(const Variable& from, const Term& to) {
   for (auto& term : term_list_) {
-    term = transform::ReplaceTerm(term, from + ",", parser::ToString(to) + ",");
-    term = transform::ReplaceTerm(term, from + ")", parser::ToString(to) + ")");
+    transform::ReplaceTermVar(term, from, to);
   }
 }
 
