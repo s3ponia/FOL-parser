@@ -23,6 +23,9 @@ void RecurHere(types::Term& v, types::Term& y, types::Term& t, MapType& map,
 types::Term& Vere(types::Term& var, MapType& map, SubstitutionMap& s);
 
 void VarHere(types::Term& var, types::Term& term, MapType& map, VarSet& vars) {
+  if (map[var.Var()].index() == HereUnificator::MAP_LOOP) {
+    throw HereUnificator::ExitLoop{"LOOP"};
+  }
   vars.insert(&var);
   if (map[var.Var()].index() == HereUnificator::NIL) {
     map[var.Var()] = &term;
@@ -137,7 +140,7 @@ types::Term& TermVere(parser::Term& t, MapType& map, SubstitutionMap& s) {
       if (map[t_list->Var()].index() == HereUnificator::DONE) {
         if (s[t_list->Var()].index() == HereUnificator::LOOP) {
           throw HereUnificator::ExitLoop{"LOOP"};
-        } else {
+        } else if (s[t_list->Var()].index() == HereUnificator::TERM) {
           *t_list =
               types::Clone(*std::get<HereUnificator::TERM>(s[t_list->Var()]));
         }
@@ -158,7 +161,7 @@ types::Term& Vere(types::Term& var, MapType& map, SubstitutionMap& s) {
     return var;
   }
 
-  auto* v = path.front();
+  auto* const v = path.front();
   path.pop_front();
 
   types::Term* z;

@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 
-sz = 10
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-n", "--number", help="exponential behavior's size", type=int)
+sz = parser.parse_args().number
 
 print(1)
 print('pP('+', '.join(['vx{0}, f(vx{1}, vx{1})'.format(i, i+1) for i in range(sz)]) + ', ' + ', '.join(['f(vw{1}, vw{1}), vw{0}'.format(i, i+1) for i in range(sz)]) + ', vx0)')

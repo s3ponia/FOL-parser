@@ -379,6 +379,10 @@ TermListIt FunctionTermsIt(FunctionFormula& fun) {
   return TermListIt(&fun.data->second);
 }
 
+ConstTermListIt FunctionTermsIt(const FunctionFormula& fun) {
+  return ConstTermListIt(&fun.data->second);
+}
+
 std::vector<Term> FunctionTerms(FunctionFormula fun) {
   return FromTermList(std::move(fun.data->second));
 }

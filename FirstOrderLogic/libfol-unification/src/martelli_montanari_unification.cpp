@@ -71,6 +71,11 @@ MartelliMontanariUnificator::Result ApplyRules(
       }
     }
     // RULE 4 END
+
+    if (eq.first.IsVar() && eq.first != eq.second &&
+        types::Contains(eq.second, eq.first)) {
+      return MartelliMontanariUnificator::Result::ERROR;
+    }
   }
 
   return MartelliMontanariUnificator::Result::EMPTY;

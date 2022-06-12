@@ -10,7 +10,7 @@ class HereUnificator : public IUnificator {
   struct done {};
   struct loop {};
   enum VarRes { NIL = 0, TERM = 1, DONE = 2 };
-  enum SubRes { LOOP = 2 };
+  enum SubRes { LOOP = 2, MAP_LOOP = 3 };
   struct ExitClash : std::runtime_error {
     using std::runtime_error::runtime_error;
   };

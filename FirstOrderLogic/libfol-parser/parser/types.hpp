@@ -311,6 +311,8 @@ const std::string& FunctionName(const FunctionFormula& fun);
 
 TermListIt FunctionTermsIt(FunctionFormula& fun);
 
+ConstTermListIt FunctionTermsIt(const FunctionFormula& fun);
+
 std::vector<Term> FunctionTerms(FunctionFormula fun);
 
 }  // namespace fol::parser
