@@ -58,7 +58,6 @@ bool IUnificator::IsPartOf(const types::Clause& lhs,
 
 std::optional<types::Clause> IUnificator::Resolution(types::Clause lhs,
                                                      types::Clause rhs) const {
-  std::cout << "Try resolve: " << lhs << " <<<>>> " << rhs << std::endl;
   for (std::size_t i = 0; i < lhs.atoms().size(); ++i) {
     for (std::size_t j = 0; j < rhs.atoms().size(); ++j) {
       if ((lhs.atoms()[i].negative() + rhs.atoms()[j].negative()) % 2 == 1) {
@@ -81,7 +80,7 @@ std::optional<types::Clause> IUnificator::Resolution(types::Clause lhs,
         Simplify(cpy_lhs);
 
         std::cout << "Resolution: " << lhs << " RESOLVE " << rhs << " >>> "
-                  << cpy_lhs << std::endl;
+                  << cpy_lhs << '\n';
 
         cpy_lhs.ClearAncestors();
         cpy_lhs.GenerateId();

@@ -8,7 +8,7 @@ std::optional<types::Clause> Prover::Prove() {
     if (!o_current.has_value()) {
       break;
     }
-    std::cout << "Get clause: " << *o_current << std::endl;
+    std::cout << "Get clause: " << *o_current << '\n';
     auto &current = *o_current;
 
     auto new_clauses = active_clauses_->Infer(current, *unificator_);

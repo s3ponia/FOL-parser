@@ -1,3 +1,46 @@
 0
-~ ? vX .  ~ ( ~ @ vY .  ( ~ pr1(vX,vY) or p2(vY) ) or ~ ( @ vY .  ( ~ pr1(vX,vY) or ( ( ( ~ @ vX .  ( ~ pr1(vY,vX) or ~ ( ~ p2(vX) and ~ p102(vX) and p101(vX) ) ) and ~ @ vX .  ( ~ pr1(vY,vX) or ~ ( p2(vX) and ~ p102(vX) and p101(vX) ) ) ) or ~ ( ~ p101(vY) and p100(vY) ) ) and ( ( ( @ vX .  ( ~ pr1(vY,vX) or ~ p2(vX) or ~ p101(vX) ) or p2(vY) ) and ( @ vX .  ( ~ pr1(vY,vX) or p2(vX) or ~ p101(vX) ) or ~ p2(vY) ) ) or ~ p101(vY) ) and ( ( ( @ vX .  ( ~ pr1(vY,vX) or ~ p1(vX) or ~ p100(vX) ) or p1(vY) ) and ( @ vX .  ( ~ pr1(vY,vX) or p1(vX) or ~ p100(vX) ) or ~ p1(vY) ) ) or ~ p100(vY) ) and ( p101(vY) or ~ p102(vY) ) and ( p100(vY) or ~ p101(vY) ) ) ) and ( ( ~ @ vY .  ( ~ pr1(vX,vY) or ~ ( ~ p2(vY) and ~ p102(vY) and p101(vY) ) ) and ~ @ vY .  ( ~ pr1(vX,vY) or ~ ( p2(vY) and ~ p102(vY) and p101(vY) ) ) ) or ~ ( ~ p101(vX) and p100(vX) ) ) and ( ( ( @ vY .  ( ~ pr1(vX,vY) or ~ p2(vY) or ~ p101(vY) ) or p2(vX) ) and ( @ vY .  ( ~ pr1(vX,vY) or p2(vY) or ~ p101(vY) ) or ~ p2(vX) ) ) or ~ p101(vX) ) and ( ( ( @ vY .  ( ~ pr1(vX,vY) or ~ p1(vY) or ~ p100(vY) ) or p1(vX) ) and ( @ vY .  ( ~ pr1(vX,vY) or p1(vY) or ~ p100(vY) ) or ~ p1(vX) ) ) or ~ p100(vX) ) and ( p101(vX) or ~ p102(vX) ) and ( p100(vX) or ~ p101(vX) ) and ~ p101(vX) and p100(vX) ) )
-
+~ ? vX .  ~ ( ~ ( @ vY .  ( ~ pr1(vX,vY) or p2(vY) ) ) or ~ ( ( @ vY .  ( ~ pr1(vX,vY) or ( ( ( ~ ( @ vX .  ( ~ pr1(vY,vX) or ~ ( ~ p2(vX) and ~ p102(vX) and p101(vX) ) ) ) and ~ ( @ vX .  ( ~ pr1(vY,vX) or ~ ( p2(vX) and ~ p102(vX) and p101(vX) ) ) ) ) or ~ ( ~ p101(vY) and p100(vY) ) ) and ( ( ( ( @ vX .  ( ~ pr1(vY,vX) or ~ p2(vX) or ~ p101(vX) ) ) or p2(vY) ) and ( ( @ vX .  ( ~ pr1(vY,vX) or p2(vX) or ~ p101(vX) ) ) or ~ p2(vY) ) ) or ~ p101(vY) ) and ( ( ( ( @ vX .  ( ~ pr1(vY,vX) or ~ p1(vX) or ~ p100(vX) ) ) or p1(vY) ) and ( ( @ vX .  ( ~ pr1(vY,vX) or p1(vX) or ~ p100(vX) ) ) or ~ p1(vY) ) ) or ~ p100(vY) )
+and ( p101(vY)
+                or ~ p102(vY) )
+        and ( p100(vY)
+                        or ~ p101(vY) ) ) ) )
+        and ( ( ~ ( @ vY .
+                                ( ~ pr1(vX,vY)
+                                  or ~ ( ~ p2(vY)
+                                          and ~ p102(vY)
+                                          and p101(vY) ) ) )
+                                and ~ ( @ vY .
+                                ( ~ pr1(vX,vY)
+                                  or ~ ( p2(vY)
+                                          and ~ p102(vY)
+                                          and p101(vY) ) ) ) )
+                        or ~ ( ~ p101(vX)
+                                and p100(vX) ) )
+        and ( ( ( ( @ vY .
+                                        ( ~ pr1(vX,vY)
+                                          or ~ p2(vY)
+                                          or ~ p101(vY) ) )
+                                        or p2(vX) )
+                                and ( ( @ vY .
+                                        ( ~ pr1(vX,vY)
+                                          or p2(vY)
+                                          or ~ p101(vY) ) )
+                                        or ~ p2(vX) ) )
+                        or ~ p101(vX) )
+        and ( ( ( ( @ vY .
+                                        ( ~ pr1(vX,vY)
+                                          or ~ p1(vY)
+                                          or ~ p100(vY) ) )
+                                        or p1(vX) )
+                                and ( ( @ vY .
+                                        ( ~ pr1(vX,vY)
+                                          or p1(vY)
+                                          or ~ p100(vY) ) )
+                                        or ~ p1(vX) ) )
+                        or ~ p100(vX) )
+and ( p101(vX)
+                or ~ p102(vX) )
+and ( p100(vX)
+                or ~ p101(vX) )
+        and ~ p101(vX)
+and p100(vX) ) )

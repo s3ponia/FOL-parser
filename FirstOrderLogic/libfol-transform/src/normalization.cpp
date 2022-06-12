@@ -12,7 +12,8 @@ bool IsNoQuantifiers(const parser::FolFormula &formula) {
          (str.find("?") == std::string::npos);
 }
 
-bool IsAllDisj(const parser::DisjunctionFormula &formula) {
+template <class T>
+bool IsAllDisj(const T &formula) {
   auto str = ToString(formula);
 
   for (std::string::size_type i = 0; i < str.size(); ++i) {
@@ -51,7 +52,8 @@ auto Match(auto matcher, parser::FolFormula formula) {
 
 parser::DisjunctionFormula DropAllOutBrackets(
     parser::DisjunctionFormula formula) {
-  if (matcher::check::Brackets(matcher::check::Disj())(formula)) {
+  if (matcher::check::Brackets(matcher::check::Disj(
+          matcher::check::Anything(), matcher::check::Anything()))(formula)) {
     std::optional<parser::DisjunctionFormula> impl;
     matcher::Brackets(matcher::RefDisj(impl)).match({std::move(formula)});
     return std::move(impl.value());
@@ -62,7 +64,8 @@ parser::DisjunctionFormula DropAllOutBrackets(
 
 parser::ConjunctionFormula DropAllOutBrackets(
     parser::ConjunctionFormula formula) {
-  if (matcher::check::Brackets(matcher::check::Conj())(formula)) {
+  if (matcher::check::Brackets(matcher::check::Conj(
+          matcher::check::Anything(), matcher::check::Anything()))(formula)) {
     std::optional<parser::ConjunctionFormula> impl;
     matcher::Brackets(matcher::RefConj(impl)).match({std::move(formula)});
     return std::move(impl.value());
@@ -738,15 +741,17 @@ parser::ImplicationFormula MoveNegInner(parser::ImplicationFormula formula) {
 
 parser::ImplicationFormula ToConjunctionNormalForm(
     parser::ImplicationFormula formula) {
-  formula = DropAllOutBrackets(std::move(formula));
-  formula = DropAllBracketsInNot(std::move(formula));
+  formula = DeleteUselessBrackets(std::move(formula));
+
+  std::cout << "ToConjunctionNormalForm: " << formula << std::endl;
 
   // Pred | ~Pred | [~]Pred or [~]Pred | [~]Pred and [~]Pred ::= <<end>>
   auto pred_checker = matcher::check::OrMatch(
       matcher::check::Pred(), matcher::check::Not(matcher::check::Pred()));
   if (pred_checker(formula) ||
       matcher::check::Disj(pred_checker, pred_checker)(formula) ||
-      matcher::check::Conj(pred_checker, pred_checker)(formula)) {
+      matcher::check::Conj(pred_checker, pred_checker)(formula) ||
+      IsAllDisj(formula)) {
     return formula;
   }
 
@@ -1158,7 +1163,6 @@ parser::FolFormula Skolemize(
 }
 
 parser::FolFormula Normalize(parser::FolFormula formula) {
-  std::cout << "Normalize: " << formula << std::endl;
   formula = RemoveImplication(std::move(formula));
   std::cout << "Remove impl: " << formula << std::endl;
   formula = MoveNegInner(std::move(formula));
@@ -1166,6 +1170,7 @@ parser::FolFormula Normalize(parser::FolFormula formula) {
   formula = Skolemize(std::move(formula));
   std::cout << "Skolemize: " << formula << std::endl;
   formula = NormalizeQuantifiers(std::move(formula));
+  formula = DeleteUselessBrackets(std::move(formula));
   std::cout << "Normalize quantifiers: " << formula << std::endl;
   formula = ToCNF(std::move(formula));
   std::cout << "To CNF: " << formula << std::endl;
