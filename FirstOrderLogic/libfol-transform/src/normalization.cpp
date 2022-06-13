@@ -743,8 +743,6 @@ parser::ImplicationFormula ToConjunctionNormalForm(
     parser::ImplicationFormula formula) {
   formula = DeleteUselessBrackets(std::move(formula));
 
-  std::cout << "ToConjunctionNormalForm: " << formula << std::endl;
-
   // Pred | ~Pred | [~]Pred or [~]Pred | [~]Pred and [~]Pred ::= <<end>>
   auto pred_checker = matcher::check::OrMatch(
       matcher::check::Pred(), matcher::check::Not(matcher::check::Pred()));
@@ -1164,16 +1162,11 @@ parser::FolFormula Skolemize(
 
 parser::FolFormula Normalize(parser::FolFormula formula) {
   formula = RemoveImplication(std::move(formula));
-  std::cout << "Remove impl: " << formula << std::endl;
   formula = MoveNegInner(std::move(formula));
-  std::cout << "Move neg inner: " << formula << std::endl;
   formula = Skolemize(std::move(formula));
-  std::cout << "Skolemize: " << formula << std::endl;
   formula = NormalizeQuantifiers(std::move(formula));
   formula = DeleteUselessBrackets(std::move(formula));
-  std::cout << "Normalize quantifiers: " << formula << std::endl;
   formula = ToCNF(std::move(formula));
-  std::cout << "To CNF: " << formula << std::endl;
   return formula;
 }
 

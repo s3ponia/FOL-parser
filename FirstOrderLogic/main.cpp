@@ -29,12 +29,13 @@ std::optional<fol::parser::FolFormula> Parse(std::string str) {
 
     return ret;
   } catch (const fol::parser::ParseError& e) {
-    std::cerr << "Error in parsing at position " << fol::lexer::i << " \'"
-              << str[fol::lexer::i] << "\': " << e.what() << std::endl;
+    std::cerr << "Error in parsing '" << str << "' at position "
+              << fol::lexer::i << " \'" << str[fol::lexer::i]
+              << "\': " << e.what() << std::endl;
     return std::nullopt;
   } catch (const fol::lexer::LexerError& e) {
-    std::cerr << "Error in lexing at position " << fol::lexer::i << " \'"
-              << str[fol::lexer::i] << "\': " << e.what() << std::endl;
+    std::cerr << "Error in lexing '" << str << "' at position " << fol::lexer::i
+              << " \'" << str[fol::lexer::i] << "\': " << e.what() << std::endl;
     return std::nullopt;
   }
 }
@@ -43,6 +44,7 @@ template <class T>
 T input(std::istream& is) {
   T res;
   is >> res;
+  is.ignore(100, '\n');
   return res;
 }
 
@@ -161,8 +163,7 @@ int main() {
       std::move(clauses_storage_factories[input<int>(std::cin) - 1]);
 
   std::cout << "Enter axioms' number: ";
-  int axioms_count;
-  std::cin >> axioms_count;
+  const int axioms_count = input<int>(std::cin);
   std::vector<fol::parser::FolFormula> axioms;
   axioms.reserve(axioms_count);
 
